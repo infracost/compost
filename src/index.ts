@@ -2,7 +2,6 @@
 
 import {
   ActionOptions,
-  Integration,
   GitHubOptions,
   Logger,
   Action,
@@ -11,6 +10,7 @@ import {
 import GitHubIntegration from './github';
 import { defaultErrorHandler, NullLogger } from './util';
 import GitLabIntegration from './gitlab';
+import Integration from './integration';
 
 function setupIntegration(opts: ActionOptions): Integration {
   const logger: Logger = opts.logger || new NullLogger();
