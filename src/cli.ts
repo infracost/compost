@@ -3,19 +3,29 @@
 import fs from 'fs';
 import { Command, flags } from '@oclif/command';
 import { postComment } from '.';
-import { PostCommentOptions } from './types';
+import { IntegrationOptions, PostCommentOptions } from './types';
 
 class IntegrationComments extends Command {
   static description = 'describe the command here';
+
+  static gitHubFlags = {
+    'github-token': flags.string({ description: 'Github token' }),
+    'github-api-url': flags.string({
+      description: 'Github API URL',
+      default: 'https://api.github.com',
+    }),
+    'github-repository': flags.string({
+      description: 'Github repository in the format owner/repo',
+    }),
+    'github-pull-request-number': flags.integer({
+      description: 'Github repository number',
+    }),
+  };
 
   static flags = {
     version: flags.version({ char: 'v' }),
     help: flags.help({ char: 'h' }),
 
-    platform: flags.string({
-      description:
-        'Set the integration platform, if blank will try to autodetect',
-    }),
     message: flags.string({
       description:
         'Message to post in the comment, mutually exclusive with message-file',
@@ -34,17 +44,7 @@ class IntegrationComments extends Command {
     'upsert-latest': flags.boolean({
       description: 'Upsert the latest comment with the same tag',
     }),
-    'github-token': flags.string({ description: 'Github token' }),
-    'github-api-url': flags.string({
-      description: 'Github API URL',
-      default: 'https://api.github.com',
-    }),
-    'github-repository': flags.string({
-      description: 'Github repository in the format owner/repo',
-    }),
-    'github-pull-request-number': flags.integer({
-      description: 'Github repository number',
-    }),
+    ...IntegrationComments.gitHubFlags,
   };
 
   static args = [];
@@ -61,23 +61,44 @@ class IntegrationComments extends Command {
       this.error('message or message-file is required');
     }
 
-    const opts: PostCommentOptions = {
-      platform: flags.platform,
-      message,
-      tag: flags.tag || 'infracost-integration-comment',
-      upsertLatest: flags['upsert-latest'],
-      github: {
+    let integrationOpts: IntegrationOptions;
+    let platform: string;
+
+    if (anyFlagSet(IntegrationComments.gitHubFlags, flags)) {
+      platform = 'github';
+
+      integrationOpts = {
         token: flags['github-token'],
         apiUrl: flags['github-api-url'],
         repository: flags['github-repository'],
         pullRequestNumber: flags['github-pull-request-number'],
-      },
+      };
+    }
+
+    const commentOpts: PostCommentOptions = {
+      platform,
+      message,
+      tag: flags.tag || 'infracost-integration-comment',
+      upsertLatest: flags['upsert-latest'],
+      integrationOptions: integrationOpts,
       logger: this,
       errorHandler: this.error,
     };
 
-    await postComment(opts);
+    await postComment(commentOpts);
   }
+}
+
+function anyFlagSet(
+  flags: flags.Input<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+  flagsSet: { [key: string]: any } // eslint-disable-line @typescript-eslint/no-explicit-any
+): boolean {
+  for (const [key, value] of Object.entries(flags)) {
+    if (flagsSet[key] !== value.default) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export = IntegrationComments;

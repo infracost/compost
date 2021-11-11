@@ -17,19 +17,25 @@ export type GitHubOptions = {
   pullRequestNumber: number;
 };
 
+export type IntegrationOptions = GitHubOptions;
+
 export type PostCommentOptions = {
   platform?: string;
   message: string;
   tag: string;
   upsertLatest?: boolean;
   logger?: Logger;
+  integrationOptions?: IntegrationOptions;
   errorHandler?: ErrorHandler;
   github?: GitHubOptions;
 };
 
-export interface Integration {
-  name: string;
-  isDetected(): boolean;
-  processEnv(opts: PostCommentOptions): void;
-  postComment(options: PostCommentOptions): Promise<void>;
+export abstract class Integration {
+  static integrationName: string;
+
+  static autoDetect(): boolean {
+    return false;
+  }
+
+  abstract postComment(options: PostCommentOptions): Promise<void>;
 }

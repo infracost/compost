@@ -1,56 +1,72 @@
 import { Octokit } from 'octokit';
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
-import { PostCommentOptions, Integration, Logger, ErrorHandler } from './types';
+import {
+  PostCommentOptions,
+  Integration,
+  Logger,
+  ErrorHandler,
+  GitHubOptions,
+} from './types';
 import { markdownComment, markdownTag } from './util';
 
-export default class GitHubIntegration implements Integration {
-  name = 'github';
+export default class GitHubIntegration extends Integration {
+  static integrationName = 'github';
 
-  constructor(private logger: Logger, private errorHandler: ErrorHandler) {}
+  private token: string;
 
-  // eslint-disable-next-line class-methods-use-this
-  isDetected(): boolean {
+  private apiUrl: string;
+
+  private repository: string;
+
+  private pullRequestNumber: number;
+
+  constructor(
+    opts: GitHubOptions,
+    private logger: Logger,
+    private errorHandler: ErrorHandler
+  ) {
+    super();
+    this.processOpts(opts);
+  }
+
+  static autoDetect(): boolean {
     return process.env.GITHUB_ACTIONS === 'true';
   }
 
-  /* eslint-disable no-param-reassign */
-  processEnv(opts: PostCommentOptions): void {
-    opts.github.token ||= process.env.GITHUB_TOKEN;
-    if (!opts.github.token) {
+  processOpts(opts?: GitHubOptions): void {
+    this.token = opts?.token || process.env.GITHUB_TOKEN;
+    if (!this.token) {
       this.errorHandler('GITHUB_TOKEN is required');
     }
 
-    opts.github.apiUrl ||=
-      process.env.GITHUB_API_URL || 'https://api.github.com';
+    this.apiUrl =
+      opts?.apiUrl || process.env.GITHUB_API_URL || 'https://api.github.com';
 
-    opts.github.repository ||= process.env.GITHUB_REPOSITORY;
-    if (!opts.github.repository) {
+    this.repository = opts?.repository || process.env.GITHUB_REPOSITORY;
+    if (!this.repository) {
       this.errorHandler('GITHUB_REPOSITORY is required');
     }
 
-    const githubPullRequestNumber =
-      opts.github.pullRequestNumber ||
-      Number(process.env.GITHUB_PULL_REQUEST_NUMBER);
+    this.pullRequestNumber =
+      opts?.pullRequestNumber || Number(process.env.GITHUB_PULL_REQUEST_NUMBER);
 
-    if (Number.isNaN(githubPullRequestNumber)) {
-      this.errorHandler('Invalid GitHub pull request number');
-    }
-
-    opts.github.pullRequestNumber = githubPullRequestNumber;
-    if (!opts.github.pullRequestNumber) {
+    if (!this.pullRequestNumber) {
       this.errorHandler('GITHUB_PULL_REQUEST_NUMBER is required');
     }
+
+    if (Number.isNaN(this.pullRequestNumber)) {
+      this.errorHandler('Invalid GitHub pull request number');
+    }
   }
-  /* eslint-enable no-param-reassign */
 
   async postComment(opts: PostCommentOptions): Promise<void> {
     const client = new Octokit({
-      auth: opts.github.token,
-      apiUrl: opts.github.apiUrl,
+      auth: this.token,
+      apiUrl: this.apiUrl,
     });
 
-    const owner = opts.github.repository.split('/')[0];
-    const repo = opts.github.repository.split('/', 2)[1];
+    const owner = this.repository.split('/')[0];
+    const repo = this.repository.split('/', 2)[1];
 
     const body = markdownComment(opts.message, opts.tag);
 
@@ -69,7 +85,7 @@ export default class GitHubIntegration implements Integration {
         const resp = await client.rest.issues.listComments({
           owner,
           repo,
-          issue_number: opts.github.pullRequestNumber,
+          issue_number: this.pullRequestNumber,
           per_page: 100,
           page,
         });
@@ -115,7 +131,7 @@ export default class GitHubIntegration implements Integration {
       await client.rest.issues.createComment({
         owner,
         repo,
-        issue_number: opts.github.pullRequestNumber,
+        issue_number: this.pullRequestNumber,
         body,
       });
     }
