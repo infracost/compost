@@ -3,7 +3,7 @@
 import fs from 'fs';
 import { Command, flags } from '@oclif/command';
 import { postComment } from '.';
-import { IntegrationOptions, Logger, PostCommentOptions } from './types';
+import { IntegrationOptions, Logger, ActionOptions, Action } from './types';
 
 class IntegrationComments extends Command {
   static description = 'describe the command here';
@@ -29,28 +29,30 @@ class IntegrationComments extends Command {
     version: flags.version({ char: 'v' }),
     help: flags.help({ char: 'h' }),
 
-    message: flags.string({
-      description:
-        'Message to post in the comment, mutually exclusive with message-file',
-      exclusive: ['message-file'],
+    body: flags.string({
+      description: 'Body of comment to post, mutually exclusive with body-file',
+      exclusive: ['body-file'],
     }),
-    'message-file': flags.string({
+    'body-file': flags.string({
       description:
-        'File containing message to post in the comment, mutually exclusive with message',
-      exclusive: ['message'],
+        'File containing body of comment to post, mutually exclusive with body',
+      exclusive: ['body'],
     }),
     tag: flags.string({
       description:
-        'Used with upsert-latest to match the latest comment with the same tag',
-      dependsOn: ['upsert-latest'],
-    }),
-    'upsert-latest': flags.boolean({
-      description: 'Upsert the latest comment with the same tag',
+        'Will match any comments with same tag when upserting, hiding or deleting',
     }),
     ...IntegrationComments.gitHubFlags,
   };
 
-  static args = [];
+  static args = [
+    {
+      name: 'action',
+      required: true,
+      options: ['create', 'upsert', 'hideAndCreate', 'deleteAndCreate'],
+      description: 'Method of posting the comment',
+    },
+  ];
 
   wrapLogger(): Logger {
     return {
@@ -61,15 +63,15 @@ class IntegrationComments extends Command {
   }
 
   async run() {
-    const { flags } = this.parse(IntegrationComments);
+    const { args, flags } = this.parse(IntegrationComments);
 
-    let { message } = flags;
-    if (flags['message-file']) {
-      message = fs.readFileSync(flags['message-file'], 'utf8');
+    let { body } = flags;
+    if (flags['body-file']) {
+      body = fs.readFileSync(flags['body-file'], 'utf8');
     }
 
-    if (!message) {
-      this.error('message or message-file is required');
+    if (!body) {
+      this.error('body or body-file is required');
     }
 
     let integrationOpts: IntegrationOptions;
@@ -87,17 +89,15 @@ class IntegrationComments extends Command {
       };
     }
 
-    const commentOpts: PostCommentOptions = {
+    const actionOpts: ActionOptions = {
       platform,
-      message,
       tag: flags.tag || 'infracost-integration-comment',
-      upsertLatest: flags['upsert-latest'],
       integrationOptions: integrationOpts,
       logger: this.wrapLogger(),
       errorHandler: this.error,
     };
 
-    await postComment(commentOpts);
+    await postComment(args.action as Action, body, actionOpts);
   }
 }
 

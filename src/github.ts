@@ -1,21 +1,14 @@
 import { Octokit } from 'octokit';
-import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
+import chalk from 'chalk';
+import { IssueComment, Repository } from '@octokit/graphql-schema';
 import {
   Integration,
   Logger,
   ErrorHandler,
   GitHubOptions,
-  PostCommentOptions,
+  ActionOptions,
 } from './types';
 import { markdownComment, markdownTag } from './util';
-
-const octokit = new Octokit();
-type ListCommentsType = GetResponseDataTypeFromEndpointMethod<
-  typeof octokit.rest.issues.listComments
->;
-type GetCommentType = GetResponseDataTypeFromEndpointMethod<
-  typeof octokit.rest.issues.getComment
->;
 
 export default class GitHubIntegration extends Integration {
   private token: string;
@@ -28,7 +21,7 @@ export default class GitHubIntegration extends Integration {
 
   private pullRequestNumber: number;
 
-  private client: Octokit;
+  private octokit: Octokit;
 
   constructor(
     opts: GitHubOptions,
@@ -76,80 +69,236 @@ export default class GitHubIntegration extends Integration {
       this.errorHandler('Invalid GitHub pull request number');
     }
 
-    this.client = new Octokit({
+    this.octokit = new Octokit({
       auth: this.token,
       apiUrl: this.apiUrl,
     });
   }
 
-  async postComment(opts: PostCommentOptions): Promise<void> {
-    const body = markdownComment(opts.message, opts.tag);
+  async create(body: string, opts: ActionOptions): Promise<void> {
+    const bodyWithTag = markdownComment(body, opts.tag);
 
-    let hasUpdated = false;
+    await this.createComment(bodyWithTag);
+  }
 
-    if (opts.upsertLatest) {
-      const latestMatchingComment = await this.findLatestMatchingComment(
-        opts.tag
-      );
+  async upsert(body: string, opts: ActionOptions): Promise<void> {
+    const bodyWithTag = markdownComment(body, opts.tag);
 
-      if (!latestMatchingComment) {
-        this.logger.info(`Could not find a latest matching comment`);
-      } else {
-        if (body === latestMatchingComment.body) {
-          this.logger.info(
-            `Not updating comment since the latest one matches exactly: ${latestMatchingComment.url}`
-          );
-          return;
-        }
+    const matchingComments = await this.findMatchingComments(opts.tag);
+    const latestMatchingComment =
+      GitHubIntegration.getLatestMatchingComment(matchingComments);
 
-        this.logger.info(`Updating comment ${latestMatchingComment.url}`);
-        await this.updateComment(latestMatchingComment.id, body);
-        hasUpdated = true;
+    if (latestMatchingComment) {
+      if (bodyWithTag === latestMatchingComment.body) {
+        this.logger.info(
+          `Not updating comment since the latest one matches exactly: ${chalk.blueBright(
+            latestMatchingComment.url
+          )}`
+        );
+        return;
       }
-    }
 
-    if (!hasUpdated) {
-      this.logger.info(`Creating new comment`);
+      await this.updateComment(latestMatchingComment, body);
+    } else {
       await this.createComment(body);
     }
   }
 
-  async findMatchingComments(tag: string): Promise<ListCommentsType> {
-    const allComments = await this.client.paginate(
-      this.client.rest.issues.listComments,
-      {
-        owner: this.owner,
-        repo: this.repo,
-        issue_number: this.pullRequestNumber,
-        per_page: 100,
-      }
+  async hideAndCreate(body: string, opts: ActionOptions): Promise<void> {
+    const bodyWithTag = markdownComment(body, opts.tag);
+
+    const matchingComments = await this.findMatchingComments(opts.tag);
+    await this.hideComments(matchingComments);
+
+    await this.createComment(bodyWithTag);
+  }
+
+  async deleteAndCreate(body: string, opts: ActionOptions): Promise<void> {
+    const bodyWithTag = markdownComment(body, opts.tag);
+
+    const matchingComments = await this.findMatchingComments(opts.tag);
+    await this.deleteComments(matchingComments);
+
+    await this.createComment(bodyWithTag);
+  }
+
+  private async findMatchingComments(tag: string): Promise<IssueComment[]> {
+    this.logger.info(`Finding matching comments for tag \`${tag}\``);
+
+    const allComments: IssueComment[] = [];
+
+    let after = null;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const data = await this.octokit.graphql<{ repository?: Repository }>(
+        `
+        query($repo: String! $owner: String! $number: Int! $after: String) {
+          repository(name: $repo owner: $owner) {
+            pullRequest(number: $number) {
+              comments(first: 100 after: $after) {
+                nodes {
+                  id
+                  url
+                  createdAt
+                  body
+                  isMinimized
+                }
+                pageInfo {
+                  endCursor
+                  hasNextPage
+                }
+              }
+            }
+          }
+        }
+        `,
+        {
+          owner: this.owner,
+          repo: this.repo,
+          number: this.pullRequestNumber,
+          after,
+        }
+      );
+
+      after = data.repository?.pullRequest?.comments.pageInfo.endCursor;
+      hasNextPage = data.repository?.pullRequest?.comments.pageInfo.hasNextPage;
+      allComments.push(...(data.repository?.pullRequest?.comments.nodes || []));
+    }
+
+    const matchingComments = allComments.filter((c) =>
+      c.body.includes(markdownTag(tag))
     );
 
-    return allComments.filter((c) => c.body.includes(markdownTag(tag)));
+    this.logger.info(
+      `Found ${matchingComments.length} matching comment${
+        matchingComments.length === 1 ? '' : 's'
+      }`
+    );
+
+    return matchingComments;
   }
 
-  async findLatestMatchingComment(tag: string): Promise<GetCommentType> {
-    const matchingComments = await this.findMatchingComments(tag);
-    return matchingComments.sort((a, b) =>
-      b.created_at.localeCompare(a.created_at)
-    )[0];
+  private static getLatestMatchingComment(
+    comments: IssueComment[]
+  ): IssueComment {
+    return comments.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   }
 
-  async updateComment(id: number, body: string): Promise<void> {
-    await this.client.rest.issues.updateComment({
-      owner: this.owner,
-      repo: this.repo,
-      comment_id: id,
-      body,
-    });
-  }
+  private async createComment(body: string): Promise<void> {
+    this.logger.info(
+      `Creating new comment on pull request ${this.pullRequestNumber}`
+    );
 
-  async createComment(body: string): Promise<void> {
-    await this.client.rest.issues.createComment({
+    // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Pull Request ID as well
+    const resp = await this.octokit.rest.issues.createComment({
       owner: this.owner,
       repo: this.repo,
       issue_number: this.pullRequestNumber,
       body,
     });
+
+    this.logger.info(
+      `Created new comment: ${chalk.blueBright(resp.data.html_url)}`
+    );
+  }
+
+  private async updateComment(
+    comment: IssueComment,
+    body: string
+  ): Promise<void> {
+    this.logger.info(`Updating comment ${chalk.blueBright(comment.url)}`);
+
+    await this.octokit.graphql(
+      `
+      mutation($input: UpdateIssueCommentInput!) {
+        updateIssueComment(input: $input) {
+          clientMutationId
+        }
+      }`,
+      {
+        input: {
+          id: comment.id,
+          body,
+        },
+      }
+    );
+  }
+
+  private async deleteComment(comment: IssueComment): Promise<void> {
+    this.logger.info(`Deleting comment ${chalk.blueBright(comment.url)}`);
+
+    await this.octokit.graphql(
+      `
+      mutation($input: DeleteIssueCommentInput!) { 
+        deleteIssueComment(input: $input) {
+          clientMutationId
+        }
+      }
+      `,
+      {
+        input: {
+          id: comment.id,
+        },
+      }
+    );
+  }
+
+  private async hideComment(comment: IssueComment): Promise<void> {
+    this.logger.info(`Hiding comment ${chalk.blueBright(comment.url)}`);
+
+    await this.octokit.graphql(
+      `
+      mutation($input: MinimizeCommentInput!) { 
+        minimizeComment(input: $input) {
+          clientMutationId
+        }
+      }
+      `,
+      {
+        input: {
+          subjectId: comment.id,
+          classifier: 'OUTDATED',
+        },
+      }
+    );
+  }
+
+  private async deleteComments(comments: IssueComment[]): Promise<void> {
+    this.logger.info(
+      `Deleting ${comments.length} comment${comments.length === 1 ? '' : 's'}`
+    );
+
+    const promises: Promise<void>[] = [];
+
+    comments.forEach((comment) => {
+      promises.push(
+        new Promise((resolve) => {
+          this.deleteComment(comment).then(resolve);
+        })
+      );
+    });
+
+    await Promise.all(promises);
+  }
+
+  private async hideComments(comments: IssueComment[]): Promise<void> {
+    this.logger.info(
+      `Hiding ${comments.length} comment${comments.length === 1 ? '' : 's'}`
+    );
+
+    const promises: Promise<void>[] = [];
+
+    const visibleComments = comments.filter((comment) => !comment.isMinimized);
+
+    visibleComments.forEach((comment) => {
+      promises.push(
+        new Promise((resolve) => {
+          this.hideComment(comment).then(resolve);
+        })
+      );
+    });
+
+    await Promise.all(promises);
   }
 }

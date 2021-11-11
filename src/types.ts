@@ -24,11 +24,11 @@ export type GitHubOptions = {
 
 export type IntegrationOptions = GitHubOptions;
 
-export type PostCommentOptions = {
+export type Action = 'create' | 'upsert' | 'hideAndCreate' | 'deleteAndCreate';
+
+export type ActionOptions = {
   platform?: string;
-  message: string;
   tag: string;
-  upsertLatest?: boolean;
   logger?: Logger;
   integrationOptions?: IntegrationOptions;
   errorHandler?: ErrorHandler;
@@ -39,5 +39,11 @@ export abstract class Integration {
     return false;
   }
 
-  abstract postComment(options: PostCommentOptions): Promise<void>;
+  abstract create(body: string, opt: ActionOptions): Promise<void>;
+
+  abstract upsert(body: string, opts: ActionOptions): Promise<void>;
+
+  abstract hideAndCreate(body: string, opts: ActionOptions): Promise<void>;
+
+  abstract deleteAndCreate(body: string, opts: ActionOptions): Promise<void>;
 }
