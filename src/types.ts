@@ -31,8 +31,6 @@ export type PostCommentOptions = {
 };
 
 export abstract class Integration {
-  static integrationName: string;
-
   static autoDetect(): boolean {
     return false;
   }

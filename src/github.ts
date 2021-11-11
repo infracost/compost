@@ -10,8 +10,6 @@ import {
 import { markdownComment, markdownTag } from './util';
 
 export default class GitHubIntegration extends Integration {
-  static integrationName = 'github';
-
   private token: string;
 
   private apiUrl: string;
