@@ -1,20 +1,6 @@
-import chalk from 'chalk';
 import axios from 'axios';
-import {
-  Integration,
-  Logger,
-  ErrorHandler,
-  GitLabOptions,
-  ActionOptions,
-} from './types';
-import { markdownComment, markdownTag } from './util';
-
-type Comment = {
-  id: string;
-  url: string;
-  createdAt: string;
-  body: string;
-};
+import { Logger, ErrorHandler, GitLabOptions, Comment } from './types';
+import Integration from './integration';
 
 export default class GitLabIntegration extends Integration {
   private token: string;
@@ -25,12 +11,8 @@ export default class GitLabIntegration extends Integration {
 
   private mergeRequestNumber: number;
 
-  constructor(
-    opts: GitLabOptions,
-    private logger: Logger,
-    private errorHandler: ErrorHandler
-  ) {
-    super();
+  constructor(opts: GitLabOptions, logger: Logger, errorHandler: ErrorHandler) {
+    super(logger, errorHandler);
     this.processOpts(opts);
   }
 
@@ -64,51 +46,15 @@ export default class GitLabIntegration extends Integration {
     }
   }
 
-  async create(body: string, opts: ActionOptions): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
-
-    await this.createComment(bodyWithTag);
-  }
-
-  async upsert(body: string, opts: ActionOptions): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
-
-    const matchingComments = await this.findMatchingComments(opts.tag);
-    const latestMatchingComment =
-      GitLabIntegration.getLatestMatchingComment(matchingComments);
-
-    if (latestMatchingComment) {
-      if (bodyWithTag === latestMatchingComment.body) {
-        this.logger.info(
-          `Not updating comment since the latest one matches exactly: ${chalk.blueBright(
-            latestMatchingComment.url
-          )}`
-        );
-        return;
-      }
-
-      await this.updateComment(latestMatchingComment, body);
-    } else {
-      await this.createComment(body);
-    }
-  }
-
   async hideAndCreate(): Promise<void> {
-    this.errorHandler('hideAndCreate is not supported by GitLab');
+    this.errorHandler('Hiding comments is hot supported by GitLab');
   }
 
-  async deleteAndCreate(body: string, opts: ActionOptions): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
-
-    const matchingComments = await this.findMatchingComments(opts.tag);
-    await this.deleteComments(matchingComments);
-
-    await this.createComment(bodyWithTag);
+  async hideComment(): Promise<void> {
+    this.errorHandler('Hiding comments is hot supported by GitLab');
   }
 
-  private async findMatchingComments(tag: string): Promise<Comment[]> {
-    this.logger.info(`Finding matching comments for tag \`${tag}\``);
-
+  async findMatchingComments(tag: string): Promise<Comment[]> {
     const allComments: Comment[] = [];
 
     let after = null;
@@ -172,33 +118,22 @@ export default class GitLabIntegration extends Integration {
 
       after = data.project?.mergeRequest?.notes.pageInfo.endCursor;
       hasNextPage = data.project?.mergeRequest?.notes.pageInfo.hasNextPage;
+
       allComments.push(...(data.project?.mergeRequest?.notes.nodes || []));
     }
 
-    const matchingComments = allComments.filter((c) =>
-      c.body.includes(markdownTag(tag))
-    );
-
-    this.logger.info(
-      `Found ${matchingComments.length} matching comment${
-        matchingComments.length === 1 ? '' : 's'
-      }`
-    );
+    const matchingComments = allComments.filter((c) => c.body.includes(tag));
 
     return matchingComments;
   }
 
-  private static getLatestMatchingComment(comments: Comment[]): Comment {
-    return comments.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  }
-
-  private async createComment(body: string): Promise<void> {
-    this.logger.info(
-      `Creating new comment on merge request ${this.mergeRequestNumber}`
-    );
-
+  async createComment(body: string): Promise<Comment> {
     // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Merge Request ID as well
-    const resp = await axios.post<{ id: number }>(
+    const resp = await axios.post<{
+      id: number;
+      body: string;
+      created_at: string;
+    }>(
       `${this.serverUrl}/api/v4/projects/${encodeURIComponent(
         this.project
       )}/merge_requests/${this.mergeRequestNumber}/notes`,
@@ -208,12 +143,15 @@ export default class GitLabIntegration extends Integration {
 
     const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mergeRequestNumber}#note_${resp.data.id}`;
 
-    this.logger.info(`Created new comment: ${chalk.blueBright(url)}`);
+    return {
+      id: resp.data.id.toString(),
+      url,
+      body: resp.data.body,
+      createdAt: resp.data.created_at,
+    };
   }
 
-  private async updateComment(comment: Comment, body: string): Promise<void> {
-    this.logger.info(`Updating comment ${chalk.blueBright(comment.url)}`);
-
+  async updateComment(comment: Comment, body: string): Promise<void> {
     const query = `
       mutation($input: UpdateNoteInput!) {
         updateNote(input: $input) {
@@ -243,9 +181,7 @@ export default class GitLabIntegration extends Integration {
     }
   }
 
-  private async deleteComment(comment: Comment): Promise<void> {
-    this.logger.info(`Deleting comment ${chalk.blueBright(comment.url)}`);
-
+  async deleteComment(comment: Comment): Promise<void> {
     const query = `
       mutation($input: DestroyNoteInput!) {
         destroyNote(input: $input) {
@@ -272,23 +208,5 @@ export default class GitLabIntegration extends Integration {
         `Failed to delete comment: ${JSON.stringify(resp.data.errors)}`
       );
     }
-  }
-
-  private async deleteComments(comments: Comment[]): Promise<void> {
-    this.logger.info(
-      `Deleting ${comments.length} comment${comments.length === 1 ? '' : 's'}`
-    );
-
-    const promises: Promise<void>[] = [];
-
-    comments.forEach((comment) => {
-      promises.push(
-        new Promise((resolve) => {
-          this.deleteComment(comment).then(resolve);
-        })
-      );
-    });
-
-    await Promise.all(promises);
   }
 }

@@ -41,16 +41,10 @@ export type GitLabOptions = {
 
 export type IntegrationOptions = GitHubOptions | GitLabOptions;
 
-export abstract class Integration {
-  static autoDetect(): boolean {
-    return false;
-  }
-
-  abstract create(body: string, opt: ActionOptions): Promise<void>;
-
-  abstract upsert(body: string, opts: ActionOptions): Promise<void>;
-
-  abstract hideAndCreate(body: string, opts: ActionOptions): Promise<void>;
-
-  abstract deleteAndCreate(body: string, opts: ActionOptions): Promise<void>;
-}
+export type Comment = {
+  id: string;
+  createdAt: string;
+  body: string;
+  url?: string;
+  isHidden?: boolean;
+};
