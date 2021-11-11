@@ -14,16 +14,6 @@ export type ErrorHandler = (
   } & PrettyPrintableError
 ) => void | never;
 
-export type GitHubOptions = {
-  token: string;
-  apiUrl: string;
-  owner: string;
-  repo: string;
-  pullRequestNumber: number;
-};
-
-export type IntegrationOptions = GitHubOptions;
-
 export type Action = 'create' | 'upsert' | 'hideAndCreate' | 'deleteAndCreate';
 
 export type ActionOptions = {
@@ -33,6 +23,23 @@ export type ActionOptions = {
   integrationOptions?: IntegrationOptions;
   errorHandler?: ErrorHandler;
 };
+
+export type GitHubOptions = {
+  token: string;
+  apiUrl: string;
+  owner: string;
+  repo: string;
+  pullRequestNumber: number;
+};
+
+export type GitLabOptions = {
+  token: string;
+  serverUrl: string;
+  project: string;
+  mergeRequestNumber: number;
+};
+
+export type IntegrationOptions = GitHubOptions | GitLabOptions;
 
 export abstract class Integration {
   static autoDetect(): boolean {

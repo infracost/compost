@@ -9,19 +9,33 @@ class IntegrationComments extends Command {
   static description = 'describe the command here';
 
   static gitHubFlags = {
-    'github-token': flags.string({ description: 'Github token' }),
+    'github-token': flags.string({ description: 'GitHub token' }),
     'github-api-url': flags.string({
-      description: 'Github API URL',
+      description: 'GitHub API URL',
       default: 'https://api.github.com',
     }),
     'github-owner': flags.string({
-      description: 'Github owner',
+      description: 'GitHub owner',
     }),
     'github-repo': flags.string({
-      description: 'Github repo',
+      description: 'GitHub repo',
     }),
     'github-pull-request-number': flags.integer({
-      description: 'Github repository number',
+      description: 'GitHub repository number',
+    }),
+  };
+
+  static gitLabFlags = {
+    'gitlab-token': flags.string({ description: 'GitLab token' }),
+    'gitlab-server-url': flags.string({
+      description: 'GitLab server URL',
+      default: 'https://github.com',
+    }),
+    'gitlab-project': flags.string({
+      description: 'GitLab project (owner/repo)',
+    }),
+    'gitlab-merge-request-number': flags.integer({
+      description: 'GitLab merge request number',
     }),
   };
 
@@ -77,7 +91,16 @@ class IntegrationComments extends Command {
     let integrationOpts: IntegrationOptions;
     let platform: string;
 
-    if (anyFlagSet(IntegrationComments.gitHubFlags, flags)) {
+    const hasGitHubFlags = hasAnyFlags(flags, IntegrationComments.gitHubFlags);
+    const hasGitLabFlags = hasAnyFlags(flags, IntegrationComments.gitLabFlags);
+
+    if ([hasGitHubFlags, hasGitLabFlags].filter(Boolean).length > 1) {
+      this.error(
+        'Only flags for one integration can be used, e.g. --github-* or --gitlab-*'
+      );
+    }
+
+    if (hasGitHubFlags) {
       platform = 'github';
 
       integrationOpts = {
@@ -86,6 +109,15 @@ class IntegrationComments extends Command {
         owner: flags['github-owner'],
         repo: flags['github-repo'],
         pullRequestNumber: flags['github-pull-request-number'],
+      };
+    } else if (hasGitLabFlags) {
+      platform = 'gitlab';
+
+      integrationOpts = {
+        token: flags['gitlab-token'],
+        serverUrl: flags['gitlab-server-url'],
+        project: flags['gitlab-project'],
+        mergeRequestNumber: flags['gitlab-merge-request-number'],
       };
     }
 
@@ -101,12 +133,12 @@ class IntegrationComments extends Command {
   }
 }
 
-function anyFlagSet(
-  flags: flags.Input<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-  flagsSet: { [key: string]: any } // eslint-disable-line @typescript-eslint/no-explicit-any
+function hasAnyFlags(
+  flags: { [key: string]: any }, // eslint-disable-line @typescript-eslint/no-explicit-any
+  flagSet: flags.Input<any> // eslint-disable-line @typescript-eslint/no-explicit-any
 ): boolean {
-  for (const [key, value] of Object.entries(flags)) {
-    if (flagsSet[key] !== value.default) {
+  for (const [key, value] of Object.entries(flagSet)) {
+    if (flags[key] !== value.default) {
       return true;
     }
   }

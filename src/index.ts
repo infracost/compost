@@ -6,9 +6,11 @@ import {
   GitHubOptions,
   Logger,
   Action,
+  GitLabOptions,
 } from './types';
 import GitHubIntegration from './github';
 import { defaultErrorHandler, NullLogger } from './util';
+import GitLabIntegration from './gitlab';
 
 function setupIntegration(opts: ActionOptions): Integration {
   const logger: Logger = opts.logger || new NullLogger();
@@ -23,6 +25,16 @@ function setupIntegration(opts: ActionOptions): Integration {
     logger.info('Detected GitHub');
     integration = new GitHubIntegration(
       opts.integrationOptions as GitHubOptions,
+      logger,
+      errorHandler
+    );
+  } else if (
+    opts.platform === 'gitlab' ||
+    (!opts.platform && GitLabIntegration.autoDetect())
+  ) {
+    logger.info('Detected GitLab');
+    integration = new GitLabIntegration(
+      opts.integrationOptions as GitLabOptions,
       logger,
       errorHandler
     );

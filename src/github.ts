@@ -133,9 +133,9 @@ export default class GitHubIntegration extends Integration {
     while (hasNextPage) {
       const data = await this.octokit.graphql<{ repository?: Repository }>(
         `
-        query($repo: String! $owner: String! $number: Int! $after: String) {
+        query($repo: String! $owner: String! $pullRequestNumber: Int! $after: String) {
           repository(name: $repo owner: $owner) {
-            pullRequest(number: $number) {
+            pullRequest(number: $pullRequestNumber) {
               comments(first: 100 after: $after) {
                 nodes {
                   id
@@ -156,7 +156,7 @@ export default class GitHubIntegration extends Integration {
         {
           owner: this.owner,
           repo: this.repo,
-          number: this.pullRequestNumber,
+          pullRequestNumber: this.pullRequestNumber,
           after,
         }
       );
