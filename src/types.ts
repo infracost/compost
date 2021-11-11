@@ -13,7 +13,8 @@ export type ErrorHandler = (
 export type GitHubOptions = {
   token: string;
   apiUrl: string;
-  repository: string;
+  owner: string;
+  repo: string;
   pullRequestNumber: number;
 };
 

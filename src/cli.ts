@@ -14,8 +14,11 @@ class IntegrationComments extends Command {
       description: 'Github API URL',
       default: 'https://api.github.com',
     }),
-    'github-repository': flags.string({
-      description: 'Github repository in the format owner/repo',
+    'github-owner': flags.string({
+      description: 'Github owner',
+    }),
+    'github-repo': flags.string({
+      description: 'Github repo',
     }),
     'github-pull-request-number': flags.integer({
       description: 'Github repository number',
@@ -70,7 +73,8 @@ class IntegrationComments extends Command {
       integrationOpts = {
         token: flags['github-token'],
         apiUrl: flags['github-api-url'],
-        repository: flags['github-repository'],
+        owner: flags['github-owner'],
+        repo: flags['github-repo'],
         pullRequestNumber: flags['github-pull-request-number'],
       };
     }

@@ -1,22 +1,34 @@
 import { Octokit } from 'octokit';
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 import {
-  PostCommentOptions,
   Integration,
   Logger,
   ErrorHandler,
   GitHubOptions,
+  PostCommentOptions,
 } from './types';
 import { markdownComment, markdownTag } from './util';
+
+const octokit = new Octokit();
+type ListCommentsType = GetResponseDataTypeFromEndpointMethod<
+  typeof octokit.rest.issues.listComments
+>;
+type GetCommentType = GetResponseDataTypeFromEndpointMethod<
+  typeof octokit.rest.issues.getComment
+>;
 
 export default class GitHubIntegration extends Integration {
   private token: string;
 
   private apiUrl: string;
 
-  private repository: string;
+  private owner: string;
+
+  private repo: string;
 
   private pullRequestNumber: number;
+
+  private client: Octokit;
 
   constructor(
     opts: GitHubOptions,
@@ -40,9 +52,17 @@ export default class GitHubIntegration extends Integration {
     this.apiUrl =
       opts?.apiUrl || process.env.GITHUB_API_URL || 'https://api.github.com';
 
-    this.repository = opts?.repository || process.env.GITHUB_REPOSITORY;
-    if (!this.repository) {
-      this.errorHandler('GITHUB_REPOSITORY is required');
+    this.owner = opts?.owner;
+    this.repo = opts?.repo;
+
+    if (!this.owner || !this.repo) {
+      if (process.env.GITHUB_REPOSITORY) {
+        const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/', 2);
+        this.owner = owner;
+        this.repo = repo;
+      } else {
+        this.errorHandler('GITHUB_REPOSITORY is required');
+      }
     }
 
     this.pullRequestNumber =
@@ -55,83 +75,81 @@ export default class GitHubIntegration extends Integration {
     if (Number.isNaN(this.pullRequestNumber)) {
       this.errorHandler('Invalid GitHub pull request number');
     }
-  }
 
-  async postComment(opts: PostCommentOptions): Promise<void> {
-    const client = new Octokit({
+    this.client = new Octokit({
       auth: this.token,
       apiUrl: this.apiUrl,
     });
+  }
 
-    const owner = this.repository.split('/')[0];
-    const repo = this.repository.split('/', 2)[1];
-
+  async postComment(opts: PostCommentOptions): Promise<void> {
     const body = markdownComment(opts.message, opts.tag);
 
     let hasUpdated = false;
 
     if (opts.upsertLatest) {
-      const perPage = 100;
-      let page = 1;
-      let hasNext = true;
+      const latestMatchingComment = await this.findLatestMatchingComment(
+        opts.tag
+      );
 
-      let matchingComments: GetResponseDataTypeFromEndpointMethod<
-        typeof client.rest.issues.listComments
-      > = [];
-
-      while (hasNext) {
-        const resp = await client.rest.issues.listComments({
-          owner,
-          repo,
-          issue_number: this.pullRequestNumber,
-          per_page: 100,
-          page,
-        });
-
-        matchingComments = matchingComments.concat(
-          resp.data.filter((c) => c.body.includes(markdownTag(opts.tag)))
-        );
-
-        page += 1;
-
-        hasNext = resp.data.length === perPage;
-      }
-
-      if (matchingComments.length > 0) {
-        const latestMatching = matchingComments.sort((a, b) =>
-          b.created_at.localeCompare(a.created_at)
-        )[0];
-
-        if (body === latestMatching.body) {
+      if (!latestMatchingComment) {
+        this.logger.log(`Could not find a latest matching comment`);
+      } else {
+        if (body === latestMatchingComment.body) {
           this.logger.log(
-            `Not updating comment since the latest one matches exactly: ${latestMatching.url}`
+            `Not updating comment since the latest one matches exactly: ${latestMatchingComment.url}`
           );
           return;
         }
 
-        this.logger.log(`Updating comment ${latestMatching.url}`);
-
-        await client.rest.issues.updateComment({
-          owner,
-          repo,
-          comment_id: latestMatching.id,
-          body,
-        });
-
+        this.logger.log(`Updating comment ${latestMatchingComment.url}`);
+        await this.updateComment(latestMatchingComment.id, body);
         hasUpdated = true;
-      } else {
-        this.logger.log(`Could not find a latest matching comment`);
       }
     }
 
     if (!hasUpdated) {
       this.logger.log(`Creating new comment`);
-      await client.rest.issues.createComment({
-        owner,
-        repo,
-        issue_number: this.pullRequestNumber,
-        body,
-      });
+      await this.createComment(body);
     }
+  }
+
+  async findMatchingComments(tag: string): Promise<ListCommentsType> {
+    const allComments = await this.client.paginate(
+      this.client.rest.issues.listComments,
+      {
+        owner: this.owner,
+        repo: this.repo,
+        issue_number: this.pullRequestNumber,
+        per_page: 100,
+      }
+    );
+
+    return allComments.filter((c) => c.body.includes(markdownTag(tag)));
+  }
+
+  async findLatestMatchingComment(tag: string): Promise<GetCommentType> {
+    const matchingComments = await this.findMatchingComments(tag);
+    return matchingComments.sort((a, b) =>
+      b.created_at.localeCompare(a.created_at)
+    )[0];
+  }
+
+  async updateComment(id: number, body: string): Promise<void> {
+    await this.client.rest.issues.updateComment({
+      owner: this.owner,
+      repo: this.repo,
+      comment_id: id,
+      body,
+    });
+  }
+
+  async createComment(body: string): Promise<void> {
+    await this.client.rest.issues.createComment({
+      owner: this.owner,
+      repo: this.repo,
+      issue_number: this.pullRequestNumber,
+      body,
+    });
   }
 }
