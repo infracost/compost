@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es2015",
+    "target": "es2017",
     "declaration": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "outDir": "./dist"
+    "importHelpers": true,
+    "outDir": "./dist",
+    "rootDir": "src",
   },
   "include": [
     "src/**/*"

@@ -1,3 +1,15 @@
+import { Logger } from './types';
+
+export class NullLogger implements Logger {
+  warn() {}
+
+  log() {}
+}
+
+export function defaultErrorHandler(err: Error): never {
+  throw err;
+}
+
 export function markdownTag(s: string) {
   return `[//]: <> (${s})`;
 }

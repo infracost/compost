@@ -1,3 +1,15 @@
+import { Command } from '@oclif/command';
+import { PrettyPrintableError } from '@oclif/errors';
+
+export type Logger = Pick<Command, 'warn' | 'log'>;
+export type ErrorHandler = (
+  input: string | Error,
+  options?: {
+    code?: string;
+    exit: false;
+  } & PrettyPrintableError
+) => void | never;
+
 export type GitHubOptions = {
   token: string;
   apiUrl: string;
@@ -11,6 +23,8 @@ export type PostCommentOptions = {
   tag: string;
   upsertLatest?: boolean;
   github?: GitHubOptions;
+  logger?: Logger;
+  errorHandler?: ErrorHandler;
 };
 
 export interface Integration {

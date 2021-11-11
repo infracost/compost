@@ -1,86 +1,84 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import yargs from "yargs";
-import { postComment } from ".";
-import { PostCommentOptions } from "./types";
+import fs from 'fs';
+import { Command, flags } from '@oclif/command';
+import { postComment } from '.';
+import { PostCommentOptions } from './types';
 
-async function parseArgs(): Promise<PostCommentOptions> {
-  const argv = await yargs.options({
-    platform: {
-      describe: "Set the integration platform, if blank will try to autodetect",
-      type: "string",
-    },
-    message: {
-      describe:
-        "Message to post in the comment, mutually exclusive with message-file",
-      type: "string",
-    },
-    "message-file": {
-      describe:
-        "File containing the message to post in the comment, mutually exclusive with message",
-      type: "string",
-    },
-    tag: {
-      describe:
-        "Used with upsert-latest to match the latest comment with the same tag",
-      type: "string",
-    },
-    "upsert-latest": {
-      describe: "Upsert the latest comment matching the match regex",
-      type: "boolean",
-    },
-    "github-token": {
-      describe: "GitHub token",
-      type: "string",
-    },
-    "github-api-url": {
-      describe: "GitHub API URL",
-      type: "string",
-    },
-    "github-repository": {
-      describe: "GitHub repository",
-      type: "string",
-    },
-    "github-pull-request-number": {
-      describe: "GitHub pull request number",
-      type: "number",
-    },
-  }).argv;
 
-  if (!argv.message && !argv["message-file"]) {
-    throw new Error("message or message-file is required");
-  }
+class IntegrationComments extends Command {
+  static description = 'describe the command here';
 
-  if (argv.message && argv["message-file"]) {
-    throw new Error("message and message-file are mutually exclusive");
-  }
+  static flags = {
+    version: flags.version({ char: 'v' }),
+    help: flags.help({ char: 'h' }),
 
-  let { message } = argv;
-  if (argv["message-file"]) {
-    message = fs.readFileSync(argv["message-file"], "utf8");
-  }
-
-  return {
-    platform: argv.platform,
-    message,
-    tag: argv.tag || "infracost-integration-comment",
-    upsertLatest: argv["upsert-latest"],
-    github: {
-      token: argv["github-token"],
-      apiUrl: argv["github-api-url"],
-      repository: argv["github-repository"],
-      pullRequestNumber: argv["github-pull-request-number"],
-    },
+    platform: flags.string({
+      description:
+        'Set the integration platform, if blank will try to autodetect',
+    }),
+    message: flags.string({
+      description:
+        'Message to post in the comment, mutually exclusive with message-file',
+      exclusive: ['message-file'],
+    }),
+    'message-file': flags.string({
+      description:
+        'File containing message to post in the comment, mutually exclusive with message',
+      exclusive: ['message'],
+    }),
+    tag: flags.string({
+      description:
+        'Used with upsert-latest to match the latest comment with the same tag',
+      dependsOn: ['upsert-latest'],
+    }),
+    'upsert-latest': flags.boolean({
+      description: 'Upsert the latest comment with the same tag',
+    }),
+    'github-token': flags.string({ description: 'Github token' }),
+    'github-api-url': flags.string({
+      description: 'Github API URL',
+      default: 'https://api.github.com',
+    }),
+    'github-repository': flags.string({
+      description: 'Github repository in the format owner/repo',
+    }),
+    'github-pull-request-number': flags.integer({
+      description: 'Github repository number',
+    }),
   };
+
+  static args = [];
+
+  async run() {
+    const { flags } = this.parse(IntegrationComments);
+
+    let {message} = flags;
+    if (flags['message-file']) {
+      message = fs.readFileSync(flags['message-file'], 'utf8');
+    }
+    
+    if (!message) {
+      this.error('message or message-file is required');
+    }
+
+    const opts: PostCommentOptions = {
+      platform: flags.platform,
+      message,
+      tag: flags.tag || 'infracost-integration-comment',
+      upsertLatest: flags['upsert-latest'],
+      github: {
+        token: flags['github-token'],
+        apiUrl: flags['github-api-url'],
+        repository: flags['github-repository'],
+        pullRequestNumber: flags['github-pull-request-number'],
+      },
+      logger: this,
+      errorHandler: this.error,
+    };
+
+    await postComment(opts);
+  }
 }
 
-async function main() {
-  const options = await parseArgs();
-  await postComment(options);
-}
-
-main().catch((err) => {
-  console.error(err); // eslint-disable-line no-console
-  process.exit(1);
-});
+export = IntegrationComments;

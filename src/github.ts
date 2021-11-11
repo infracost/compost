@@ -1,30 +1,30 @@
-import { Octokit } from "octokit";
-import { GetResponseDataTypeFromEndpointMethod } from "@octokit/types";
-import { PostCommentOptions, Integration } from "./types";
-import { markdownComment, markdownTag } from "./utils";
+import { Octokit } from 'octokit';
+import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
+import { PostCommentOptions, Integration, Logger, ErrorHandler } from './types';
+import { markdownComment, markdownTag } from './util';
 
 export default class GitHubIntegration implements Integration {
-  name = "github";
+  name = 'github';
 
-  constructor() {}
+  constructor(private logger: Logger, private errorHandler: ErrorHandler) {}
 
   // eslint-disable-next-line class-methods-use-this
   isDetected(): boolean {
-    return process.env.GITHUB_ACTIONS === "true";
+    return process.env.GITHUB_ACTIONS === 'true';
   }
 
   processOpts(opts: PostCommentOptions): void {
     opts.github.token ||= process.env.GITHUB_TOKEN;
     if (!opts.github.token) {
-      throw new Error("GITHUB_TOKEN is required");
+      this.errorHandler('GITHUB_TOKEN is required');
     }
 
     opts.github.apiUrl ||=
-      process.env.GITHUB_API_URL || "https://api.github.com";
+      process.env.GITHUB_API_URL || 'https://api.github.com';
 
     opts.github.repository ||= process.env.GITHUB_REPOSITORY;
     if (!opts.github.repository) {
-      throw new Error("GITHUB_REPOSITORY is required");
+      this.errorHandler('GITHUB_REPOSITORY is required');
     }
 
     const githubPullRequestNumber =
@@ -32,12 +32,12 @@ export default class GitHubIntegration implements Integration {
       Number(process.env.GITHUB_PULL_REQUEST_NUMBER);
 
     if (Number.isNaN(githubPullRequestNumber)) {
-      throw new Error("Invalid GitHub pull request number");
+      this.errorHandler('Invalid GitHub pull request number');
     }
 
     opts.github.pullRequestNumber = githubPullRequestNumber;
     if (!opts.github.pullRequestNumber) {
-      throw new Error("GITHUB_PULL_REQUEST_NUMBER is required");
+      this.errorHandler('GITHUB_PULL_REQUEST_NUMBER is required');
     }
   }
 
@@ -47,8 +47,8 @@ export default class GitHubIntegration implements Integration {
       apiUrl: opts.github.apiUrl,
     });
 
-    const owner = opts.github.repository.split("/")[0];
-    const repo = opts.github.repository.split("/", 2)[1];
+    const owner = opts.github.repository.split('/')[0];
+    const repo = opts.github.repository.split('/', 2)[1];
 
     const body = markdownComment(opts.message, opts.tag);
 
@@ -75,7 +75,7 @@ export default class GitHubIntegration implements Integration {
         matchingComments = matchingComments.concat(
           resp.data.filter((c) => c.body.includes(markdownTag(opts.tag)))
         );
-        
+
         page += 1;
 
         hasNext = resp.data.length === perPage;
@@ -86,6 +86,15 @@ export default class GitHubIntegration implements Integration {
           b.created_at.localeCompare(a.created_at)
         )[0];
 
+        if (body === latestMatching.body) {
+          this.logger.log(
+            `Not updating comment since the latest one matches exactly: ${latestMatching.url}`
+          );
+          return;
+        }
+
+        this.logger.log(`Updating comment ${latestMatching.url}`);
+
         await client.rest.issues.updateComment({
           owner,
           repo,
@@ -94,10 +103,13 @@ export default class GitHubIntegration implements Integration {
         });
 
         hasUpdated = true;
+      } else {
+        this.logger.log(`Could not find a latest matching comment`);
       }
     }
 
     if (!hasUpdated) {
+      this.logger.log(`Creating new comment`);
       await client.rest.issues.createComment({
         owner,
         repo,
