@@ -1,7 +1,10 @@
-import { Command } from '@oclif/command';
 import { PrettyPrintableError } from '@oclif/errors';
 
-export type Logger = Pick<Command, 'warn' | 'log'>;
+export interface Logger {
+  debug(message?: string, ...args: any[]): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  info(message?: string, ...args: any[]): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  warn(message?: string, ...args: any[]): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
 
 export type ErrorHandler = (
   input: string | Error,

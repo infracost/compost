@@ -3,7 +3,7 @@
 import fs from 'fs';
 import { Command, flags } from '@oclif/command';
 import { postComment } from '.';
-import { IntegrationOptions, PostCommentOptions } from './types';
+import { IntegrationOptions, Logger, PostCommentOptions } from './types';
 
 class IntegrationComments extends Command {
   static description = 'describe the command here';
@@ -52,6 +52,14 @@ class IntegrationComments extends Command {
 
   static args = [];
 
+  wrapLogger(): Logger {
+    return {
+      debug: (...args: any[]) => this.debug(args), // eslint-disable-line @typescript-eslint/no-explicit-any
+      info: (message: string, ...args: any[]) => this.log(message, ...args), // eslint-disable-line @typescript-eslint/no-explicit-any
+      warn: (message: string) => this.warn(message),
+    };
+  }
+
   async run() {
     const { flags } = this.parse(IntegrationComments);
 
@@ -85,7 +93,7 @@ class IntegrationComments extends Command {
       tag: flags.tag || 'infracost-integration-comment',
       upsertLatest: flags['upsert-latest'],
       integrationOptions: integrationOpts,
-      logger: this,
+      logger: this.wrapLogger(),
       errorHandler: this.error,
     };
 

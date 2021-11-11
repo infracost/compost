@@ -93,23 +93,23 @@ export default class GitHubIntegration extends Integration {
       );
 
       if (!latestMatchingComment) {
-        this.logger.log(`Could not find a latest matching comment`);
+        this.logger.info(`Could not find a latest matching comment`);
       } else {
         if (body === latestMatchingComment.body) {
-          this.logger.log(
+          this.logger.info(
             `Not updating comment since the latest one matches exactly: ${latestMatchingComment.url}`
           );
           return;
         }
 
-        this.logger.log(`Updating comment ${latestMatchingComment.url}`);
+        this.logger.info(`Updating comment ${latestMatchingComment.url}`);
         await this.updateComment(latestMatchingComment.id, body);
         hasUpdated = true;
       }
     }
 
     if (!hasUpdated) {
-      this.logger.log(`Creating new comment`);
+      this.logger.info(`Creating new comment`);
       await this.createComment(body);
     }
   }

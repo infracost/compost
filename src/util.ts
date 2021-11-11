@@ -1,9 +1,11 @@
 import { Logger } from './types';
 
 export class NullLogger implements Logger {
-  warn() {} // eslint-disable-line class-methods-use-this
+  debug() {} // eslint-disable-line class-methods-use-this
 
-  log() {} // eslint-disable-line class-methods-use-this
+  info() {} // eslint-disable-line class-methods-use-this
+
+  warn() {} // eslint-disable-line class-methods-use-this
 }
 
 export function defaultErrorHandler(err: Error): never {
