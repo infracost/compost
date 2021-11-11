@@ -2,6 +2,7 @@ import { Command } from '@oclif/command';
 import { PrettyPrintableError } from '@oclif/errors';
 
 export type Logger = Pick<Command, 'warn' | 'log'>;
+
 export type ErrorHandler = (
   input: string | Error,
   options?: {
@@ -28,7 +29,6 @@ export type PostCommentOptions = {
   logger?: Logger;
   integrationOptions?: IntegrationOptions;
   errorHandler?: ErrorHandler;
-  github?: GitHubOptions;
 };
 
 export abstract class Integration {
