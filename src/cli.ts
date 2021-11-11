@@ -5,7 +5,6 @@ import { Command, flags } from '@oclif/command';
 import { postComment } from '.';
 import { PostCommentOptions } from './types';
 
-
 class IntegrationComments extends Command {
   static description = 'describe the command here';
 
@@ -53,11 +52,11 @@ class IntegrationComments extends Command {
   async run() {
     const { flags } = this.parse(IntegrationComments);
 
-    let {message} = flags;
+    let { message } = flags;
     if (flags['message-file']) {
       message = fs.readFileSync(flags['message-file'], 'utf8');
     }
-    
+
     if (!message) {
       this.error('message or message-file is required');
     }

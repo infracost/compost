@@ -22,14 +22,14 @@ export type PostCommentOptions = {
   message: string;
   tag: string;
   upsertLatest?: boolean;
-  github?: GitHubOptions;
   logger?: Logger;
   errorHandler?: ErrorHandler;
+  github?: GitHubOptions;
 };
 
 export interface Integration {
   name: string;
   isDetected(): boolean;
-  processOpts(opts: PostCommentOptions): void;
+  processEnv(opts: PostCommentOptions): void;
   postComment(options: PostCommentOptions): Promise<void>;
 }

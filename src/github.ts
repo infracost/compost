@@ -13,7 +13,8 @@ export default class GitHubIntegration implements Integration {
     return process.env.GITHUB_ACTIONS === 'true';
   }
 
-  processOpts(opts: PostCommentOptions): void {
+  /* eslint-disable no-param-reassign */
+  processEnv(opts: PostCommentOptions): void {
     opts.github.token ||= process.env.GITHUB_TOKEN;
     if (!opts.github.token) {
       this.errorHandler('GITHUB_TOKEN is required');
@@ -40,6 +41,7 @@ export default class GitHubIntegration implements Integration {
       this.errorHandler('GITHUB_PULL_REQUEST_NUMBER is required');
     }
   }
+  /* eslint-enable no-param-reassign */
 
   async postComment(opts: PostCommentOptions): Promise<void> {
     const client = new Octokit({

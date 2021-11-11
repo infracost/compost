@@ -26,7 +26,7 @@ export function postComment(opts: PostCommentOptions): void {
   }
 
   for (const integration of detectedIntegrations) {
-    integration.processOpts(opts);
+    integration.processEnv(opts);
   }
 
   for (const integration of detectedIntegrations) {
