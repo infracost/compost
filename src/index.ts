@@ -6,45 +6,57 @@ import {
   Logger,
   Action,
   GitLabOptions,
+  CommentHandler,
+  AzureDevOpsTfsOptions,
 } from './types';
-import GitHubIntegration from './github';
+import GitHubCommentHandler from './github';
 import { defaultErrorHandler, NullLogger } from './util';
-import GitLabIntegration from './gitlab';
-import Integration from './integration';
+import GitLabCommentHandler from './gitlab';
+import AzureDevOpsTfsCommentHandler from './azureDevOpsTfs';
 
-function setupIntegration(opts: ActionOptions): Integration {
+function createCommentHandler(opts: ActionOptions): CommentHandler {
   const logger: Logger = opts.logger || new NullLogger();
   const errorHandler = opts.errorHandler || defaultErrorHandler;
 
-  let integration: Integration;
+  let commentHandler: CommentHandler;
 
   if (
     opts.platform === 'github' ||
-    (!opts.platform && GitHubIntegration.autoDetect())
+    (!opts.platform && GitHubCommentHandler.autoDetect())
   ) {
     logger.info('Detected GitHub');
-    integration = new GitHubIntegration(
-      opts.integrationOptions as GitHubOptions,
+    commentHandler = new GitHubCommentHandler(
+      opts.platformOptions as GitHubOptions,
       logger,
       errorHandler
     );
   } else if (
     opts.platform === 'gitlab' ||
-    (!opts.platform && GitLabIntegration.autoDetect())
+    (!opts.platform && GitLabCommentHandler.autoDetect())
   ) {
     logger.info('Detected GitLab');
-    integration = new GitLabIntegration(
-      opts.integrationOptions as GitLabOptions,
+    commentHandler = new GitLabCommentHandler(
+      opts.platformOptions as GitLabOptions,
+      logger,
+      errorHandler
+    );
+  } else if (
+    opts.platform === 'azure-devops-tfs' ||
+    (!opts.platform && AzureDevOpsTfsCommentHandler.autoDetect())
+  ) {
+    logger.info('Detected Azure DevOps (TFS)');
+    commentHandler = new AzureDevOpsTfsCommentHandler(
+      opts.platformOptions as AzureDevOpsTfsOptions,
       logger,
       errorHandler
     );
   }
 
-  if (!integration) {
-    errorHandler(`Could not detect the current integration platform`);
+  if (!commentHandler) {
+    errorHandler(`Could not detect the current platform`);
   }
 
-  return integration;
+  return commentHandler;
 }
 
 export async function postComment(
@@ -74,30 +86,30 @@ export async function createComment(
   body: string,
   opts: ActionOptions
 ): Promise<void> {
-  const integration = setupIntegration(opts);
-  await integration.create(body, opts);
+  const integration = createCommentHandler(opts);
+  await integration.createComment(body, opts);
 }
 
 export async function upsertComment(
   body: string,
   opts: ActionOptions
 ): Promise<void> {
-  const integration = setupIntegration(opts);
-  await integration.upsert(body, opts);
+  const integration = createCommentHandler(opts);
+  await integration.upsertComment(body, opts);
 }
 
 export async function hideAndCreateComment(
   body: string,
   opts: ActionOptions
 ): Promise<void> {
-  const integration = setupIntegration(opts);
-  await integration.hideAndCreate(body, opts);
+  const integration = createCommentHandler(opts);
+  await integration.hideAndCreateComment(body, opts);
 }
 
 export function deleteAndCreateComment(
   body: string,
   opts: ActionOptions
 ): void {
-  const integration = setupIntegration(opts);
-  integration.deleteAndCreate(body, opts);
+  const integration = createCommentHandler(opts);
+  integration.deleteAndCreateComment(body, opts);
 }

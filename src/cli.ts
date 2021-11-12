@@ -3,7 +3,7 @@
 import fs from 'fs';
 import { Command, flags } from '@oclif/command';
 import { postComment } from '.';
-import { IntegrationOptions, Logger, ActionOptions, Action } from './types';
+import { PlatformOptions, Logger, ActionOptions, Action } from './types';
 
 class IntegrationComments extends Command {
   static description = 'describe the command here';
@@ -21,7 +21,7 @@ class IntegrationComments extends Command {
       description: 'GitHub repo',
     }),
     'github-pull-request-number': flags.integer({
-      description: 'GitHub repository number',
+      description: 'GitHub pull request number',
     }),
   };
 
@@ -36,6 +36,24 @@ class IntegrationComments extends Command {
     }),
     'gitlab-merge-request-number': flags.integer({
       description: 'GitLab merge request number',
+    }),
+  };
+
+  static azureDevOpsTfsFlags = {
+    'azure-devops-tfs-token': flags.string({
+      description: 'Azure DevOps TFC token',
+    }),
+    'azure-devops-tfs-collection-uri': flags.string({
+      description: 'Azure DevOps collection URI',
+    }),
+    'azure-devops-tfs-team-project': flags.string({
+      description: 'Azure DevOps team project',
+    }),
+    'azure-devops-tfs-repository-id': flags.string({
+      description: 'Azure DevOps repository ID',
+    }),
+    'azure-devops-tfs-pull-request-number': flags.integer({
+      description: 'Azure DevOps pull request number',
     }),
   };
 
@@ -57,6 +75,8 @@ class IntegrationComments extends Command {
         'Will match any comments with same tag when upserting, hiding or deleting',
     }),
     ...IntegrationComments.gitHubFlags,
+    ...IntegrationComments.gitLabFlags,
+    ...IntegrationComments.azureDevOpsTfsFlags,
   };
 
   static args = [
@@ -88,13 +108,20 @@ class IntegrationComments extends Command {
       this.error('body or body-file is required');
     }
 
-    let integrationOpts: IntegrationOptions;
+    let platformOpts: PlatformOptions;
     let platform: string;
 
     const hasGitHubFlags = hasAnyFlags(flags, IntegrationComments.gitHubFlags);
     const hasGitLabFlags = hasAnyFlags(flags, IntegrationComments.gitLabFlags);
+    const hasAzureDevopsTfsFlags = hasAnyFlags(
+      flags,
+      IntegrationComments.azureDevOpsTfsFlags
+    );
 
-    if ([hasGitHubFlags, hasGitLabFlags].filter(Boolean).length > 1) {
+    if (
+      [hasGitHubFlags, hasGitLabFlags, hasAzureDevopsTfsFlags].filter(Boolean)
+        .length > 1
+    ) {
       this.error(
         'Only flags for one integration can be used, e.g. --github-* or --gitlab-*'
       );
@@ -103,7 +130,7 @@ class IntegrationComments extends Command {
     if (hasGitHubFlags) {
       platform = 'github';
 
-      integrationOpts = {
+      platformOpts = {
         token: flags['github-token'],
         apiUrl: flags['github-api-url'],
         owner: flags['github-owner'],
@@ -113,18 +140,28 @@ class IntegrationComments extends Command {
     } else if (hasGitLabFlags) {
       platform = 'gitlab';
 
-      integrationOpts = {
+      platformOpts = {
         token: flags['gitlab-token'],
         serverUrl: flags['gitlab-server-url'],
         project: flags['gitlab-project'],
         mergeRequestNumber: flags['gitlab-merge-request-number'],
+      };
+    } else if (hasAzureDevopsTfsFlags) {
+      platform = 'azure-devops-tfs';
+
+      platformOpts = {
+        token: flags['azure-devops-tfs-token'],
+        collectionUri: flags['azure-devops-tfs-collection-uri'],
+        teamProject: flags['azure-devops-tfs-team-project'],
+        repositoryId: flags['azure-devops-tfs-repository-id'],
+        pullRequestNumber: flags['azure-devops-tfs-pull-request-number'],
       };
     }
 
     const actionOpts: ActionOptions = {
       platform,
       tag: flags.tag || 'infracost-integration-comment',
-      integrationOptions: integrationOpts,
+      platformOptions: platformOpts,
       logger: this.wrapLogger(),
       errorHandler: this.error,
     };
