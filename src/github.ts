@@ -1,9 +1,31 @@
 import { Octokit } from 'octokit';
 import { Repository } from '@octokit/graphql-schema';
 import { Comment, Logger, ErrorHandler, GitHubOptions } from './types';
-import Integration from './integration';
+import BaseCommentHandler from './commentHandler';
 
-export default class GitHubIntegration extends Integration {
+class GitHubComment implements Comment {
+  constructor(
+    public id: string,
+    public body: string,
+    public createdAt: string,
+    public url: string,
+    public isMinimized?: boolean
+  ) {}
+
+  ref(): string {
+    return this.url;
+  }
+
+  sortKey(): string {
+    return this.createdAt;
+  }
+
+  isHidden(): boolean {
+    return this.isMinimized;
+  }
+}
+
+export default class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
   private token: string;
 
   private apiUrl: string;
@@ -22,13 +44,17 @@ export default class GitHubIntegration extends Integration {
   }
 
   static autoDetect(): boolean {
-    return process.env.GITHUB_ACTIONS === 'true';
+    return (
+      process.env.GITHUB_ACTIONS === 'true' &&
+      !!process.env.GITHUB_PULL_REQUEST_NUMBER
+    );
   }
 
   processOpts(opts?: GitHubOptions): void {
     this.token = opts?.token || process.env.GITHUB_TOKEN;
     if (!this.token) {
       this.errorHandler('GITHUB_TOKEN is required');
+      return;
     }
 
     this.apiUrl =
@@ -44,6 +70,7 @@ export default class GitHubIntegration extends Integration {
         this.repo = repo;
       } else {
         this.errorHandler('GITHUB_REPOSITORY is required');
+        return;
       }
     }
 
@@ -52,10 +79,12 @@ export default class GitHubIntegration extends Integration {
 
     if (!this.pullRequestNumber) {
       this.errorHandler('GITHUB_PULL_REQUEST_NUMBER is required');
+      return;
     }
 
     if (Number.isNaN(this.pullRequestNumber)) {
       this.errorHandler('Invalid GitHub pull request number');
+      return;
     }
 
     this.octokit = new Octokit({
@@ -64,10 +93,8 @@ export default class GitHubIntegration extends Integration {
     });
   }
 
-  async findMatchingComments(tag: string): Promise<Comment[]> {
-    this.logger.info(`Finding matching comments for tag \`${tag}\``);
-
-    const allComments: Comment[] = [];
+  async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
+    const allComments: GitHubComment[] = [];
 
     let after = null;
     let hasNextPage = true;
@@ -106,23 +133,19 @@ export default class GitHubIntegration extends Integration {
       after = data.repository?.pullRequest?.comments.pageInfo.endCursor;
       hasNextPage = data.repository?.pullRequest?.comments.pageInfo.hasNextPage;
 
-      allComments.push(
-        ...((data.repository?.pullRequest?.comments.nodes as Comment[]) || [])
+      const comments = (data.repository?.pullRequest?.comments.nodes || []).map(
+        (c) =>
+          new GitHubComment(c.id, c.body, c.createdAt, c.url, c.isMinimized)
       );
+      allComments.push(...comments);
     }
 
     const matchingComments = allComments.filter((c) => c.body.includes(tag));
 
-    this.logger.info(
-      `Found ${matchingComments.length} matching comment${
-        matchingComments.length === 1 ? '' : 's'
-      }`
-    );
-
     return matchingComments;
   }
 
-  async createComment(body: string): Promise<Comment> {
+  async callCreateComment(body: string): Promise<GitHubComment> {
     // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Pull Request ID as well
     const resp = await this.octokit.rest.issues.createComment({
       owner: this.owner,
@@ -131,15 +154,16 @@ export default class GitHubIntegration extends Integration {
       body,
     });
 
-    return {
-      id: resp.data.id.toString(),
-      url: resp.data.html_url,
-      createdAt: resp.data.created_at,
-      body: resp.data.body,
-    };
+    return new GitHubComment(
+      resp.data.id.toString(),
+      resp.data.body,
+      resp.data.created_at,
+      resp.data.url,
+      false
+    );
   }
 
-  async updateComment(comment: Comment, body: string): Promise<void> {
+  async callUpdateComment(comment: GitHubComment, body: string): Promise<void> {
     await this.octokit.graphql(
       `
       mutation($input: UpdateIssueCommentInput!) {
@@ -156,7 +180,7 @@ export default class GitHubIntegration extends Integration {
     );
   }
 
-  async deleteComment(comment: Comment): Promise<void> {
+  async callDeleteComment(comment: GitHubComment): Promise<void> {
     await this.octokit.graphql(
       `
       mutation($input: DeleteIssueCommentInput!) { 
@@ -173,7 +197,7 @@ export default class GitHubIntegration extends Integration {
     );
   }
 
-  async hideComment(comment: Comment): Promise<void> {
+  async callHideComment(comment: GitHubComment): Promise<void> {
     await this.octokit.graphql(
       `
       mutation($input: MinimizeCommentInput!) { 

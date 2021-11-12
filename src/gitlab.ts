@@ -1,8 +1,30 @@
 import axios from 'axios';
 import { Logger, ErrorHandler, GitLabOptions, Comment } from './types';
-import Integration from './integration';
+import CommentHandler from './commentHandler';
 
-export default class GitLabIntegration extends Integration {
+class GitLabComment implements Comment {
+  constructor(
+    public id: string,
+    public body: string,
+    public createdAt: string,
+    public url: string
+  ) {}
+
+  ref(): string {
+    return this.url;
+  }
+
+  sortKey(): string {
+    return this.createdAt;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  isHidden(): boolean {
+    return false;
+  }
+}
+
+export default class GitLabCommentHandler extends CommentHandler<GitLabComment> {
   private token: string;
 
   private serverUrl: string;
@@ -17,13 +39,16 @@ export default class GitLabIntegration extends Integration {
   }
 
   static autoDetect(): boolean {
-    return process.env.GITLAB_CI === 'true';
+    return (
+      process.env.GITLAB_CI === 'true' && !!process.env.CI_MERGE_REQUEST_IID
+    );
   }
 
   processOpts(opts?: GitLabOptions): void {
     this.token = opts?.token || process.env.GITLAB_TOKEN;
     if (!this.token) {
       this.errorHandler('GITLAB_TOKEN is required');
+      return;
     }
 
     this.serverUrl =
@@ -32,6 +57,7 @@ export default class GitLabIntegration extends Integration {
     this.project = opts?.project || process.env.CI_PROJECT_PATH;
     if (!this.project) {
       this.errorHandler('CI_PROJECT_PATH is required');
+      return;
     }
 
     this.mergeRequestNumber =
@@ -39,6 +65,7 @@ export default class GitLabIntegration extends Integration {
 
     if (!this.mergeRequestNumber) {
       this.errorHandler('CI_MERGE_REQUEST_IID is required');
+      return;
     }
 
     if (Number.isNaN(this.mergeRequestNumber)) {
@@ -46,16 +73,16 @@ export default class GitLabIntegration extends Integration {
     }
   }
 
-  async hideAndCreate(): Promise<void> {
-    this.errorHandler('Hiding comments is hot supported by GitLab');
+  async hideAndCreateComment(): Promise<void> {
+    this.errorHandler('Hiding comments is not supported by GitLab');
   }
 
-  async hideComment(): Promise<void> {
-    this.errorHandler('Hiding comments is hot supported by GitLab');
+  async callHideComment(): Promise<void> {
+    this.errorHandler('Hiding comments is not supported by GitLab');
   }
 
-  async findMatchingComments(tag: string): Promise<Comment[]> {
-    const allComments: Comment[] = [];
+  async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {
+    const allComments: GitLabComment[] = [];
 
     let after = null;
     let hasNextPage = true;
@@ -93,7 +120,12 @@ export default class GitLabIntegration extends Integration {
           project: {
             mergeRequest?: {
               notes: {
-                nodes: Comment[];
+                nodes: {
+                  id: string;
+                  body: string;
+                  createdAt: string;
+                  url: string;
+                }[];
                 pageInfo: {
                   endCursor: string;
                   hasNextPage: boolean;
@@ -119,7 +151,11 @@ export default class GitLabIntegration extends Integration {
       after = data.project?.mergeRequest?.notes.pageInfo.endCursor;
       hasNextPage = data.project?.mergeRequest?.notes.pageInfo.hasNextPage;
 
-      allComments.push(...(data.project?.mergeRequest?.notes.nodes || []));
+      const comments = (data.project?.mergeRequest?.notes.nodes || []).map(
+        (c) => new GitLabComment(c.id, c.body, c.createdAt, c.url)
+      );
+
+      allComments.push(...comments);
     }
 
     const matchingComments = allComments.filter((c) => c.body.includes(tag));
@@ -127,10 +163,10 @@ export default class GitLabIntegration extends Integration {
     return matchingComments;
   }
 
-  async createComment(body: string): Promise<Comment> {
+  async callCreateComment(body: string): Promise<GitLabComment> {
     // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Merge Request ID as well
     const resp = await axios.post<{
-      id: number;
+      id: string;
       body: string;
       created_at: string;
     }>(
@@ -143,15 +179,15 @@ export default class GitLabIntegration extends Integration {
 
     const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mergeRequestNumber}#note_${resp.data.id}`;
 
-    return {
-      id: resp.data.id.toString(),
-      url,
-      body: resp.data.body,
-      createdAt: resp.data.created_at,
-    };
+    return new GitLabComment(
+      resp.data.id,
+      resp.data.body,
+      resp.data.created_at,
+      url
+    );
   }
 
-  async updateComment(comment: Comment, body: string): Promise<void> {
+  async callUpdateComment(comment: GitLabComment, body: string): Promise<void> {
     const query = `
       mutation($input: UpdateNoteInput!) {
         updateNote(input: $input) {
@@ -181,7 +217,7 @@ export default class GitLabIntegration extends Integration {
     }
   }
 
-  async deleteComment(comment: Comment): Promise<void> {
+  async callDeleteComment(comment: GitLabComment): Promise<void> {
     const query = `
       mutation($input: DestroyNoteInput!) {
         destroyNote(input: $input) {

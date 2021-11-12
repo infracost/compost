@@ -20,7 +20,7 @@ export type ActionOptions = {
   platform?: string;
   tag: string;
   logger?: Logger;
-  integrationOptions?: IntegrationOptions;
+  platformOptions?: PlatformOptions;
   errorHandler?: ErrorHandler;
 };
 
@@ -39,12 +39,29 @@ export type GitLabOptions = {
   mergeRequestNumber: number;
 };
 
-export type IntegrationOptions = GitHubOptions | GitLabOptions;
-
-export type Comment = {
-  id: string;
-  createdAt: string;
-  body: string;
-  url?: string;
-  isHidden?: boolean;
+export type AzureDevOpsTfsOptions = {
+  token: string;
+  collectionUri: string;
+  teamProject: string;
+  repositoryId: string;
+  pullRequestNumber: number;
 };
+
+export type PlatformOptions =
+  | GitHubOptions
+  | GitLabOptions
+  | AzureDevOpsTfsOptions;
+
+export interface CommentHandler {
+  createComment(body: string, opts: ActionOptions): Promise<void>;
+  upsertComment(body: string, opts: ActionOptions): Promise<void>;
+  hideAndCreateComment(body: string, opts: ActionOptions): Promise<void>;
+  deleteAndCreateComment(body: string, opts: ActionOptions): Promise<void>;
+}
+
+export interface Comment {
+  body: string;
+  ref(): string;
+  isHidden(): boolean;
+  sortKey(): string;
+}

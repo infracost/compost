@@ -1,5 +1,11 @@
 import chalk from 'chalk';
-import { ActionOptions, Comment, ErrorHandler, Logger } from './types';
+import {
+  ActionOptions,
+  Comment,
+  CommentHandler,
+  ErrorHandler,
+  Logger,
+} from './types';
 
 function markdownTag(s: string) {
   return `[//]: <> (${s})`;
@@ -14,26 +20,28 @@ function markdownComment(s: string, tag?: string) {
   return comment;
 }
 
-export default abstract class Integration {
+export default abstract class BaseCommentHandler<C extends Comment>
+  implements CommentHandler
+{
   constructor(protected logger: Logger, protected errorHandler: ErrorHandler) {}
 
   static autoDetect(): boolean {
     return false;
   }
 
-  async create(body: string, opts: ActionOptions): Promise<void> {
+  async createComment(body: string, opts: ActionOptions): Promise<void> {
     const bodyWithTag = markdownComment(body, opts.tag);
 
     this.logger.info('Creating new comment');
-    const comment = await this.createComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.url)}`);
+    const comment = await this.callCreateComment(bodyWithTag);
+    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
   }
 
-  async upsert(body: string, opts: ActionOptions): Promise<void> {
+  async upsertComment(body: string, opts: ActionOptions): Promise<void> {
     const bodyWithTag = markdownComment(body, opts.tag);
 
     this.logger.info(`Finding matching comments for tag \`${opts.tag}\``);
-    const matchingComments = await this.findMatchingComments(
+    const matchingComments = await this.callFindMatchingComments(
       markdownTag(opts.tag)
     );
     this.logger.info(
@@ -43,35 +51,37 @@ export default abstract class Integration {
     );
 
     const latestMatchingComment = matchingComments.sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt)
+      b.sortKey().localeCompare(a.sortKey())
     )[0];
 
     if (latestMatchingComment) {
       if (bodyWithTag === latestMatchingComment.body) {
         this.logger.info(
           `Not updating comment since the latest one matches exactly: ${chalk.blueBright(
-            latestMatchingComment.url
+            latestMatchingComment.ref()
           )}`
         );
         return;
       }
 
       this.logger.info(
-        `Updating comment ${chalk.blueBright(latestMatchingComment.url)}`
+        `Updating comment ${chalk.blueBright(latestMatchingComment.ref())}`
       );
-      await this.updateComment(latestMatchingComment, bodyWithTag);
+      await this.callUpdateComment(latestMatchingComment, bodyWithTag);
     } else {
       this.logger.info('Creating new comment');
-      const comment = await this.createComment(bodyWithTag);
-      this.logger.info(`Created new comment: ${chalk.blueBright(comment.url)}`);
+      const comment = await this.callCreateComment(bodyWithTag);
+      this.logger.info(
+        `Created new comment: ${chalk.blueBright(comment.ref())}`
+      );
     }
   }
 
-  async hideAndCreate(body: string, opts: ActionOptions): Promise<void> {
+  async hideAndCreateComment(body: string, opts: ActionOptions): Promise<void> {
     const bodyWithTag = markdownComment(body, opts.tag);
 
     this.logger.info(`Finding matching comments for tag \`${opts.tag}\``);
-    const matchingComments = await this.findMatchingComments(
+    const matchingComments = await this.callFindMatchingComments(
       markdownTag(opts.tag)
     );
     this.logger.info(
@@ -83,15 +93,18 @@ export default abstract class Integration {
     await this.hideComments(matchingComments);
 
     this.logger.info('Creating new comment');
-    const comment = await this.createComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.url)}`);
+    const comment = await this.callCreateComment(bodyWithTag);
+    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
   }
 
-  async deleteAndCreate(body: string, opts: ActionOptions): Promise<void> {
+  async deleteAndCreateComment(
+    body: string,
+    opts: ActionOptions
+  ): Promise<void> {
     const bodyWithTag = markdownComment(body, opts.tag);
 
     this.logger.info(`Finding matching comments for tag \`${opts.tag}\``);
-    const matchingComments = await this.findMatchingComments(
+    const matchingComments = await this.callFindMatchingComments(
       markdownTag(opts.tag)
     );
     this.logger.info(
@@ -103,11 +116,11 @@ export default abstract class Integration {
     await this.deleteComments(matchingComments);
 
     this.logger.info('Creating new comment');
-    const comment = await this.createComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.url)}`);
+    const comment = await this.callCreateComment(bodyWithTag);
+    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
   }
 
-  private async deleteComments(comments: Comment[]): Promise<void> {
+  private async deleteComments(comments: C[]): Promise<void> {
     this.logger.info(
       `Deleting ${comments.length} comment${comments.length === 1 ? '' : 's'}`
     );
@@ -117,8 +130,10 @@ export default abstract class Integration {
     comments.forEach((comment) => {
       promises.push(
         new Promise((resolve) => {
-          this.logger.info(`Deleting comment ${chalk.blueBright(comment.url)}`);
-          this.deleteComment(comment).then(resolve);
+          this.logger.info(
+            `Deleting comment ${chalk.blueBright(comment.ref())}`
+          );
+          this.callDeleteComment(comment).then(resolve);
         })
       );
     });
@@ -126,7 +141,7 @@ export default abstract class Integration {
     await Promise.all(promises);
   }
 
-  private async hideComments(comments: Comment[]): Promise<void> {
+  private async hideComments(comments: C[]): Promise<void> {
     this.logger.info(
       `Hiding ${comments.length} comment${comments.length === 1 ? '' : 's'}`
     );
@@ -138,8 +153,8 @@ export default abstract class Integration {
     visibleComments.forEach((comment) => {
       promises.push(
         new Promise((resolve) => {
-          this.logger.info(`Hiding comment ${chalk.blueBright(comment.url)}`);
-          this.hideComment(comment).then(resolve);
+          this.logger.info(`Hiding comment ${chalk.blueBright(comment.ref())}`);
+          this.callHideComment(comment).then(resolve);
         })
       );
     });
@@ -147,13 +162,13 @@ export default abstract class Integration {
     await Promise.all(promises);
   }
 
-  abstract findMatchingComments(tag: string): Promise<Comment[]>;
+  abstract callFindMatchingComments(tag: string): Promise<C[]>;
 
-  abstract createComment(body: string): Promise<Comment>;
+  abstract callCreateComment(body: string): Promise<C>;
 
-  abstract updateComment(comment: Comment, body: string): Promise<void>;
+  abstract callUpdateComment(comment: C, body: string): Promise<void>;
 
-  abstract hideComment(comment: Comment): Promise<void>;
+  abstract callHideComment(comment: C): Promise<void>;
 
-  abstract deleteComment(comment: Comment): Promise<void>;
+  abstract callDeleteComment(comment: C): Promise<void>;
 }
