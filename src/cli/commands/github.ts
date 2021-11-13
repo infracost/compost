@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import IntegrationComments, { Behavior } from '../..';
 import { GitHubOptions } from '../../platforms/github';
-import BaseCommand from '../baseCommand';
+import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
   static description = 'Post a comment to a GitHub pull request/commit';

@@ -1,5 +1,5 @@
 import IntegrationComments, { Behavior } from '../..';
-import BaseCommand from '../baseCommand';
+import BaseCommand from '../base';
 
 export default class AutoDetect extends BaseCommand {
   static description =

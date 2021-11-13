@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import IntegrationComments, { Behavior } from '../..';
 import { AzureDevOpsTfsOptions } from '../../platforms/azureDevOpsTfs';
-import BaseCommand from '../baseCommand';
+import BaseCommand from '../base';
 
 export default class AzureDevOpsTfs extends BaseCommand {
   static description =

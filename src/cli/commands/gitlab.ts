@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import IntegrationComments, { Behavior } from '../..';
 import { GitLabOptions } from '../../platforms/gitlab';
-import BaseCommand from '../baseCommand';
+import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
   static description = 'Post a comment to a GitLab merge request/commit';
