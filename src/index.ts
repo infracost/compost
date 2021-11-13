@@ -1,115 +1,97 @@
-/* eslint-disable import/prefer-default-export */
-
+import { CommentHandler, CommentHandlerOptions } from './platforms';
 import {
-  ActionOptions,
-  GitHubOptions,
-  Logger,
-  Action,
-  GitLabOptions,
-  CommentHandler,
+  AzureDevOpsTfsCommentHandler,
   AzureDevOpsTfsOptions,
-} from './types';
-import GitHubCommentHandler from './github';
-import { defaultErrorHandler, NullLogger } from './util';
-import GitLabCommentHandler from './gitlab';
-import AzureDevOpsTfsCommentHandler from './azureDevOpsTfs';
+} from './platforms/azureDevOpsTfs';
+import { GitHubCommentHandler, GitHubOptions } from './platforms/github';
+import { GitLabCommentHandler, GitLabOptions } from './platforms/gitlab';
+import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from './util';
 
-function createCommentHandler(opts: ActionOptions): CommentHandler {
-  const logger: Logger = opts.logger || new NullLogger();
-  const errorHandler = opts.errorHandler || defaultErrorHandler;
+export type SupportedPlatforms = 'github' | 'gitlab' | 'azure-devops-tfs';
 
-  let commentHandler: CommentHandler;
+export type Behavior = 'update' | 'new' | 'hide_and_new' | 'delete_and_new';
 
-  if (
-    opts.platform === 'github' ||
-    (!opts.platform && GitHubCommentHandler.autoDetect())
-  ) {
-    logger.info('Detected GitHub');
-    commentHandler = new GitHubCommentHandler(
-      opts.platformOptions as GitHubOptions,
-      logger,
-      errorHandler
-    );
-  } else if (
-    opts.platform === 'gitlab' ||
-    (!opts.platform && GitLabCommentHandler.autoDetect())
-  ) {
-    logger.info('Detected GitLab');
-    commentHandler = new GitLabCommentHandler(
-      opts.platformOptions as GitLabOptions,
-      logger,
-      errorHandler
-    );
-  } else if (
-    opts.platform === 'azure-devops-tfs' ||
-    (!opts.platform && AzureDevOpsTfsCommentHandler.autoDetect())
-  ) {
-    logger.info('Detected Azure DevOps (TFS)');
-    commentHandler = new AzureDevOpsTfsCommentHandler(
-      opts.platformOptions as AzureDevOpsTfsOptions,
-      logger,
-      errorHandler
-    );
-  }
+export type Options =
+  | CommentHandlerOptions
+  | GitHubOptions
+  | GitLabOptions
+  | AzureDevOpsTfsOptions;
 
-  if (!commentHandler) {
-    errorHandler(`Could not detect the current platform`);
-  }
-
-  return commentHandler;
-}
-
-export async function postComment(
-  action: Action,
-  body: string,
-  opts: ActionOptions
-): Promise<void> {
-  switch (action) {
-    case 'create':
-      await createComment(body, opts);
-      break;
-    case 'upsert':
-      await upsertComment(body, opts);
-      break;
-    case 'hideAndCreate':
-      await hideAndCreateComment(body, opts);
-      break;
-    case 'deleteAndCreate':
-      await deleteAndCreateComment(body, opts);
-      break;
+function commentHandlerFactory(
+  platform: string,
+  opts?: Options
+): CommentHandler {
+  switch (platform) {
+    case 'github':
+      return new GitHubCommentHandler(opts as GitHubOptions);
+    case 'gitlab':
+      return new GitLabCommentHandler(opts as GitLabOptions);
+    case 'azure-devops-tfs':
+      return new AzureDevOpsTfsCommentHandler(opts as AzureDevOpsTfsOptions);
     default:
-      throw new Error(`Unknown action: ${action}`);
+      throw new Error(`Unsupported platform: ${platform}`);
   }
 }
 
-export async function createComment(
-  body: string,
-  opts: ActionOptions
-): Promise<void> {
-  const integration = createCommentHandler(opts);
-  await integration.createComment(body, opts);
-}
+export default class IntegrationComments {
+  opts: Options;
 
-export async function upsertComment(
-  body: string,
-  opts: ActionOptions
-): Promise<void> {
-  const integration = createCommentHandler(opts);
-  await integration.upsertComment(body, opts);
-}
+  private logger: Logger;
 
-export async function hideAndCreateComment(
-  body: string,
-  opts: ActionOptions
-): Promise<void> {
-  const integration = createCommentHandler(opts);
-  await integration.hideAndCreateComment(body, opts);
-}
+  private errorHandler: ErrorHandler;
 
-export function deleteAndCreateComment(
-  body: string,
-  opts: ActionOptions
-): void {
-  const integration = createCommentHandler(opts);
-  integration.deleteAndCreateComment(body, opts);
+  constructor(opts?: Options) {
+    this.opts = opts;
+    this.logger = opts?.logger ?? new NullLogger();
+    this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
+  }
+
+  detectPlatform(): SupportedPlatforms | void {
+    if (GitHubCommentHandler.detect()) {
+      this.logger.info('Detected GitHub');
+      return 'github';
+    }
+    if (GitLabCommentHandler.detect()) {
+      this.logger.info('Detected GitLab');
+      return 'gitlab';
+    }
+    if (AzureDevOpsTfsCommentHandler.detect()) {
+      this.logger.info('Detected Azure DevOps (TFS)');
+      return 'azure-devops-tfs';
+    }
+    this.errorHandler('Unable to detect platform');
+    return null;
+  }
+
+  async postComment(
+    platform: SupportedPlatforms,
+    behavior: Behavior,
+    body: string
+  ): Promise<void> {
+    let handler: CommentHandler;
+    try {
+      handler = commentHandlerFactory(platform, this.opts);
+    } catch (err) {
+      this.errorHandler(err);
+      return;
+    }
+
+    switch (behavior) {
+      case 'update':
+        await handler.updateComment(body);
+        break;
+      case 'new':
+        await handler.newComment(body);
+        break;
+      case 'hide_and_new':
+        await handler.hideAndNewComment(body);
+        break;
+      case 'delete_and_new':
+        await handler.deleteAndNewComment(body);
+        break;
+      default:
+        // This should never happen
+        throw new Error(`Unknown behavior: ${behavior}`);
+    }
+  }
 }

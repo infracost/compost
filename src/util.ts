@@ -1,4 +1,18 @@
-import { Logger } from './types';
+import { PrettyPrintableError } from '@oclif/errors';
+
+export interface Logger {
+  debug(message?: string, ...args: any[]): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  info(message?: string, ...args: any[]): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  warn(message?: string, ...args: any[]): void; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
+export type ErrorHandler = (
+  input: string | Error,
+  options?: {
+    code?: string;
+    exit: false;
+  } & PrettyPrintableError
+) => void | never;
 
 export class NullLogger implements Logger {
   debug() {} // eslint-disable-line class-methods-use-this
@@ -10,17 +24,4 @@ export class NullLogger implements Logger {
 
 export function defaultErrorHandler(err: Error): never {
   throw err;
-}
-
-export function markdownTag(s: string) {
-  return `[//]: <> (${s})`;
-}
-
-export function markdownComment(s: string, tag?: string) {
-  let comment = s;
-  if (tag) {
-    comment = `${markdownTag(tag)}\n${comment}`;
-  }
-
-  return comment;
 }

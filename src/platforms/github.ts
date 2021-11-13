@@ -1,7 +1,15 @@
 import { Octokit } from 'octokit';
 import { Repository } from '@octokit/graphql-schema';
-import { Comment, Logger, ErrorHandler, GitHubOptions } from './types';
-import BaseCommentHandler from './commentHandler';
+import { Comment, CommentHandlerOptions } from '.';
+import BaseCommentHandler from './base';
+
+export type GitHubOptions = {
+  token: string;
+  apiUrl: string;
+  owner: string;
+  repo: string;
+  pullRequestNumber: number;
+} & CommentHandlerOptions;
 
 class GitHubComment implements Comment {
   constructor(
@@ -25,7 +33,7 @@ class GitHubComment implements Comment {
   }
 }
 
-export default class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
+export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
   private token: string;
 
   private apiUrl: string;
@@ -38,16 +46,13 @@ export default class GitHubCommentHandler extends BaseCommentHandler<GitHubComme
 
   private octokit: Octokit;
 
-  constructor(opts: GitHubOptions, logger: Logger, errorHandler: ErrorHandler) {
-    super(logger, errorHandler);
+  constructor(opts?: GitHubOptions) {
+    super(opts as CommentHandlerOptions);
     this.processOpts(opts);
   }
 
-  static autoDetect(): boolean {
-    return (
-      process.env.GITHUB_ACTIONS === 'true' &&
-      !!process.env.GITHUB_PULL_REQUEST_NUMBER
-    );
+  static detect(): boolean {
+    return process.env.GITHUB_ACTIONS === 'true';
   }
 
   processOpts(opts?: GitHubOptions): void {

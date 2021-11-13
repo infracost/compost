@@ -1,6 +1,14 @@
 import axios from 'axios';
-import { Comment, Logger, ErrorHandler, AzureDevOpsTfsOptions } from './types';
-import CommentHandler from './commentHandler';
+import { Comment, CommentHandlerOptions } from '.';
+import BaseCommentHandler from './base';
+
+export type AzureDevOpsTfsOptions = {
+  token: string;
+  collectionUri: string;
+  teamProject: string;
+  repositoryId: string;
+  pullRequestNumber: number;
+} & CommentHandlerOptions;
 
 class AzureDevOpsTfsComment implements Comment {
   constructor(
@@ -24,7 +32,7 @@ class AzureDevOpsTfsComment implements Comment {
   }
 }
 
-export default class AzureDevOpsTfsCommentHandler extends CommentHandler<AzureDevOpsTfsComment> {
+export class AzureDevOpsTfsCommentHandler extends BaseCommentHandler<AzureDevOpsTfsComment> {
   private token: string;
 
   private collectionUri: string;
@@ -35,16 +43,12 @@ export default class AzureDevOpsTfsCommentHandler extends CommentHandler<AzureDe
 
   private pullRequestNumber: number;
 
-  constructor(
-    opts: AzureDevOpsTfsOptions,
-    logger: Logger,
-    errorHandler: ErrorHandler
-  ) {
-    super(logger, errorHandler);
+  constructor(opts?: AzureDevOpsTfsOptions) {
+    super(opts as CommentHandlerOptions);
     this.processOpts(opts);
   }
 
-  static autoDetect(): boolean {
+  static detect(): boolean {
     return (
       !!process.env.SYSTEM_COLLECTIONURI &&
       process.env.BUILD_REASON === 'PullRequest' &&

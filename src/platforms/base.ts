@@ -1,48 +1,34 @@
 import chalk from 'chalk';
-import {
-  ActionOptions,
-  Comment,
-  CommentHandler,
-  ErrorHandler,
-  Logger,
-} from './types';
+import { Comment, CommentHandler, CommentHandlerOptions } from '.';
+import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from '../util';
 
-function markdownTag(s: string) {
-  return `[//]: <> (${s})`;
-}
-
-function markdownComment(s: string, tag?: string) {
-  let comment = s;
-  if (tag) {
-    comment = `${markdownTag(tag)}\n${comment}`;
-  }
-
-  return comment;
-}
+const defaultTag = 'infracost-integration-comment';
 
 export default abstract class BaseCommentHandler<C extends Comment>
   implements CommentHandler
 {
-  constructor(protected logger: Logger, protected errorHandler: ErrorHandler) {}
+  protected tag: string;
+
+  protected logger: Logger;
+
+  protected errorHandler: ErrorHandler;
+
+  constructor(protected opts?: CommentHandlerOptions) {
+    this.tag = opts.tag || defaultTag;
+    this.logger = opts?.logger ?? new NullLogger();
+    this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
+  }
 
   static autoDetect(): boolean {
     return false;
   }
 
-  async createComment(body: string, opts: ActionOptions): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
+  async updateComment(body: string): Promise<void> {
+    const bodyWithTag = markdownComment(body, this.tag);
 
-    this.logger.info('Creating new comment');
-    const comment = await this.callCreateComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
-  }
-
-  async upsertComment(body: string, opts: ActionOptions): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
-
-    this.logger.info(`Finding matching comments for tag \`${opts.tag}\``);
+    this.logger.info(`Finding matching comments for tag \`${this.tag}\``);
     const matchingComments = await this.callFindMatchingComments(
-      markdownTag(opts.tag)
+      markdownTag(this.tag)
     );
     this.logger.info(
       `Found ${matchingComments.length} matching comment${
@@ -77,12 +63,20 @@ export default abstract class BaseCommentHandler<C extends Comment>
     }
   }
 
-  async hideAndCreateComment(body: string, opts: ActionOptions): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
+  async newComment(body: string): Promise<void> {
+    const bodyWithTag = markdownComment(body, this.tag);
 
-    this.logger.info(`Finding matching comments for tag \`${opts.tag}\``);
+    this.logger.info('Creating new comment');
+    const comment = await this.callCreateComment(bodyWithTag);
+    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
+  }
+
+  async hideAndNewComment(body: string): Promise<void> {
+    const bodyWithTag = markdownComment(body, this.tag);
+
+    this.logger.info(`Finding matching comments for tag \`${this.tag}\``);
     const matchingComments = await this.callFindMatchingComments(
-      markdownTag(opts.tag)
+      markdownTag(this.tag)
     );
     this.logger.info(
       `Found ${matchingComments.length} matching comment${
@@ -97,15 +91,12 @@ export default abstract class BaseCommentHandler<C extends Comment>
     this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
   }
 
-  async deleteAndCreateComment(
-    body: string,
-    opts: ActionOptions
-  ): Promise<void> {
-    const bodyWithTag = markdownComment(body, opts.tag);
+  async deleteAndNewComment(body: string): Promise<void> {
+    const bodyWithTag = markdownComment(body, this.tag);
 
-    this.logger.info(`Finding matching comments for tag \`${opts.tag}\``);
+    this.logger.info(`Finding matching comments for tag \`${this.tag}\``);
     const matchingComments = await this.callFindMatchingComments(
-      markdownTag(opts.tag)
+      markdownTag(this.tag)
     );
     this.logger.info(
       `Found ${matchingComments.length} matching comment${
@@ -171,4 +162,17 @@ export default abstract class BaseCommentHandler<C extends Comment>
   abstract callHideComment(comment: C): Promise<void>;
 
   abstract callDeleteComment(comment: C): Promise<void>;
+}
+
+function markdownTag(s: string) {
+  return `[//]: <> (${s})`;
+}
+
+function markdownComment(s: string, tag?: string) {
+  let comment = s;
+  if (tag) {
+    comment = `${markdownTag(tag)}\n${comment}`;
+  }
+
+  return comment;
 }

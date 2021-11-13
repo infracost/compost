@@ -1,6 +1,13 @@
 import axios from 'axios';
-import { Logger, ErrorHandler, GitLabOptions, Comment } from './types';
-import CommentHandler from './commentHandler';
+import { Comment, CommentHandlerOptions } from '.';
+import CommentHandler from './base';
+
+export type GitLabOptions = {
+  token: string;
+  serverUrl: string;
+  project: string;
+  mergeRequestNumber: number;
+} & CommentHandlerOptions;
 
 class GitLabComment implements Comment {
   constructor(
@@ -24,7 +31,7 @@ class GitLabComment implements Comment {
   }
 }
 
-export default class GitLabCommentHandler extends CommentHandler<GitLabComment> {
+export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
   private token: string;
 
   private serverUrl: string;
@@ -33,12 +40,12 @@ export default class GitLabCommentHandler extends CommentHandler<GitLabComment> 
 
   private mergeRequestNumber: number;
 
-  constructor(opts: GitLabOptions, logger: Logger, errorHandler: ErrorHandler) {
-    super(logger, errorHandler);
+  constructor(opts?: GitLabOptions) {
+    super(opts as CommentHandlerOptions);
     this.processOpts(opts);
   }
 
-  static autoDetect(): boolean {
+  static detect(): boolean {
     return (
       process.env.GITLAB_CI === 'true' && !!process.env.CI_MERGE_REQUEST_IID
     );
