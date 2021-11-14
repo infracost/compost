@@ -1,13 +1,14 @@
 import axios from 'axios';
 import { Comment, CommentHandlerOptions } from '.';
-import CommentHandler from './base';
+import { DetectResult } from '..';
+import { Logger } from '../util';
+import BaseCommentHandler from './base';
 
-export type GitLabOptions = {
+export type GitLabOptions = CommentHandlerOptions & {
   token: string;
   serverUrl: string;
   project: string;
-  mergeRequestNumber: number;
-} & CommentHandlerOptions;
+};
 
 class GitLabComment implements Comment {
   constructor(
@@ -31,24 +32,16 @@ class GitLabComment implements Comment {
   }
 }
 
-export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
-  private token: string;
+abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
+  protected token: string;
 
-  private serverUrl: string;
+  protected serverUrl: string;
 
-  private project: string;
-
-  private mergeRequestNumber: number;
+  protected project: string;
 
   constructor(opts?: GitLabOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
-  }
-
-  static detect(): boolean {
-    return (
-      process.env.GITLAB_CI === 'true' && !!process.env.CI_MERGE_REQUEST_IID
-    );
   }
 
   processOpts(opts?: GitLabOptions): void {
@@ -64,28 +57,48 @@ export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
     this.project = opts?.project || process.env.CI_PROJECT_PATH;
     if (!this.project) {
       this.errorHandler('CI_PROJECT_PATH is required');
-      return;
-    }
-
-    this.mergeRequestNumber =
-      opts?.mergeRequestNumber || Number(process.env.CI_MERGE_REQUEST_IID);
-
-    if (!this.mergeRequestNumber) {
-      this.errorHandler('CI_MERGE_REQUEST_IID is required');
-      return;
-    }
-
-    if (Number.isNaN(this.mergeRequestNumber)) {
-      this.errorHandler('Invalid GitLab pull request number');
     }
   }
+}
 
-  async hideAndCreateComment(): Promise<void> {
-    this.errorHandler('Hiding comments is not supported by GitLab');
+export class GitLabMrHandler extends GitLabHandler {
+  constructor(private mrNumber: number, opts?: GitLabOptions) {
+    super(opts as GitLabOptions);
   }
 
-  async callHideComment(): Promise<void> {
-    this.errorHandler('Hiding comments is not supported by GitLab');
+  static detect(logger: Logger): DetectResult | null {
+    logger.debug('Checking for GitLab CI merge request');
+
+    if (process.env.GITLAB_CI !== 'true') {
+      logger.debug('GITLAB_CI environment variable is not set to true');
+      return null;
+    }
+
+    logger.debug('GITLAB_CI environment variable is set to true');
+
+    if (!process.env.CI_MERGE_REQUEST_IID) {
+      logger.debug('CI_MERGE_REQUEST_IID environment variable is not set');
+      return null;
+    }
+
+    logger.debug(
+      `CI_MERGE_REQUEST_IID environment variable is set to ${process.env.CI_MERGE_REQUEST_IID}`
+    );
+
+    const mrNumber = Number(process.env.CI_MERGE_REQUEST_IID);
+
+    if (Number.isNaN(mrNumber)) {
+      logger.debug(
+        `CI_MERGE_REQUEST_IID environment variable is not a valid number`
+      );
+      return null;
+    }
+
+    return {
+      platform: 'gitlab',
+      targetType: 'mr',
+      targetRef: mrNumber,
+    };
   }
 
   async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {
@@ -96,9 +109,9 @@ export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
 
     while (hasNextPage) {
       const query = `
-        query($project: ID!, $mergeRequestNumber: String!, $after: String) {
+        query($project: ID!, $mrNumber: String!, $after: String) {
           project(fullPath: $project) {
-            mergeRequest(iid: $mergeRequestNumber) {
+            mergeRequest(iid: $mrNumber) {
               notes(first: 100, after: $after) {
                 nodes {
                   id
@@ -117,7 +130,7 @@ export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
 
       const variables = {
         project: this.project,
-        mergeRequestNumber: this.mergeRequestNumber.toString(),
+        mrNumber: this.mrNumber.toString(),
         after,
       };
 
@@ -179,12 +192,12 @@ export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
     }>(
       `${this.serverUrl}/api/v4/projects/${encodeURIComponent(
         this.project
-      )}/merge_requests/${this.mergeRequestNumber}/notes`,
+      )}/merge_requests/${this.mrNumber}/notes`,
       { body },
       { headers: { Authorization: `Bearer ${this.token}` } }
     );
 
-    const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mergeRequestNumber}#note_${resp.data.id}`;
+    const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mrNumber}#note_${resp.data.id}`;
 
     return new GitLabComment(
       resp.data.id,
@@ -252,4 +265,8 @@ export class GitLabCommentHandler extends CommentHandler<GitLabComment> {
       );
     }
   }
+
+  callHideComment = this.unsupported(
+    'Hiding comments is not supported by GitLab'
+  );
 }

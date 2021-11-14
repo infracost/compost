@@ -1,51 +1,64 @@
 import { flags } from '@oclif/command';
-import IntegrationComments, { Behavior } from '../..';
+import IntegrationComments from '../..';
 import { AzureDevOpsTfsOptions } from '../../platforms/azureDevOpsTfs';
 import BaseCommand from '../base';
 
-export default class AzureDevOpsTfs extends BaseCommand {
+export default class AzureDevOpsTfsCommand extends BaseCommand {
   static description =
     'Post a comment to a Azure DevOps (TFS) pull request/commit';
 
   static flags = {
     ...BaseCommand.flags,
-    'azure-devops-tfs-token': flags.string({
-      description: 'Azure DevOps (TFS) token',
+    'azure-devops-token': flags.string({
+      description: 'Azure DevOps token',
     }),
-    'azure-devops-tfs-collection-uri': flags.string({
+    'collection-uri': flags.string({
       description: 'Azure DevOps (TFS) collection URI',
     }),
-    'azure-devops-tfs-team-project': flags.string({
+    'team-project': flags.string({
       description: 'Azure DevOps (TFS) team project',
     }),
-    'azure-devops-tfs-repository-id': flags.string({
+    'repository-id': flags.string({
       description: 'Azure DevOps (TFS) repository ID',
-    }),
-    'azure-devops-tfs-pull-request-number': flags.integer({
-      description: 'Azure DevOps (TFS) pull request number',
     }),
   };
 
-  static args = BaseCommand.args;
+  static args = [
+    ...BaseCommand.args,
+    {
+      name: 'targetType',
+      required: true,
+      options: ['pr'],
+      description: 'Whether to post on a pull request or commit',
+    },
+    {
+      name: 'targetReference',
+      required: true,
+      description: 'The pull request number or commit SHA ',
+    },
+  ];
 
   async run() {
-    const { args, flags } = this.parse(AzureDevOpsTfs);
+    const { args, flags } = this.parse(AzureDevOpsTfsCommand);
 
     const body = this.loadBody(flags);
 
     const opts: AzureDevOpsTfsOptions = {
       ...this.loadBaseOptions(flags),
-      token: flags['azure-devops-tfs-token'],
-      collectionUri: flags['azure-devops-tfs-collection-uri'],
-      teamProject: flags['azure-devops-tfs-team-project'],
-      repositoryId: flags['azure-devops-tfs-repository-id'],
-      pullRequestNumber: flags['azure-devops-tfs-pull-request-number'],
+      token: flags['azure-devops-token'],
+      collectionUri: flags['collection-uri'],
+      teamProject: flags['team-project'],
+      repositoryId: flags['repository-id'],
     };
+
+    const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
 
     const comments = new IntegrationComments(opts);
     await comments.postComment(
       'azure-devops-tfs',
-      args.behavior as Behavior,
+      targetType,
+      targetRef,
+      behavior,
       body
     );
   }

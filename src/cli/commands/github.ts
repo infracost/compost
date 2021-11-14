@@ -1,5 +1,5 @@
 import { flags } from '@oclif/command';
-import IntegrationComments, { Behavior } from '../..';
+import IntegrationComments from '../..';
 import { GitHubOptions } from '../../platforms/github';
 import BaseCommand from '../base';
 
@@ -9,18 +9,15 @@ export default class GitHubCommand extends BaseCommand {
   static flags = {
     ...BaseCommand.flags,
     'github-token': flags.string({ description: 'GitHub token' }),
-    'github-api-url': flags.string({
+    'api-url': flags.string({
       description: 'GitHub API URL',
       default: 'https://api.github.com',
     }),
-    'github-owner': flags.string({
+    owner: flags.string({
       description: 'GitHub owner',
     }),
-    'github-repo': flags.string({
+    repo: flags.string({
       description: 'GitHub repo',
-    }),
-    'github-pull-request-number': flags.integer({
-      description: 'GitHub pull request number',
     }),
   };
 
@@ -34,13 +31,14 @@ export default class GitHubCommand extends BaseCommand {
     const opts: GitHubOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['github-token'],
-      apiUrl: flags['github-api-url'],
-      owner: flags['github-owner'],
-      repo: flags['github-repo'],
-      pullRequestNumber: flags['github-pull-request-number'],
+      apiUrl: flags['api-url'],
+      owner: flags.owner,
+      repo: flags.repo,
     };
 
+    const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
+
     const comments = new IntegrationComments(opts);
-    await comments.postComment('github', args.behavior as Behavior, body);
+    await comments.postComment('github', targetType, targetRef, behavior, body);
   }
 }

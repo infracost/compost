@@ -7,7 +7,8 @@ export default class AutoDetect extends BaseCommand {
 
   static flags = BaseCommand.flags;
 
-  static args = BaseCommand.args;
+  // We don't want the targt_type or targer_ref args
+  static args = BaseCommand.args.slice(2);
 
   async run() {
     const { args, flags } = this.parse(AutoDetect);
@@ -17,10 +18,20 @@ export default class AutoDetect extends BaseCommand {
     const opts = this.loadBaseOptions(flags);
 
     const comments = new IntegrationComments(opts);
-    const platform = comments.detectPlatform();
-    if (!platform) {
-      this.error('Unable to detect platform');
+
+    const detectResult = comments.detectEnvironment();
+    if (!detectResult) {
+      this.error('Unable to detect current environment');
     }
-    await comments.postComment(platform, args.behavior as Behavior, body);
+
+    const { platform, targetType, targetRef } = detectResult;
+
+    await comments.postComment(
+      platform,
+      targetType,
+      targetRef,
+      args.behavior as Behavior,
+      body
+    );
   }
 }

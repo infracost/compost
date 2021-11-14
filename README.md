@@ -26,3 +26,7 @@ or
 ```sh
 ts-node src/cli.ts --help
 ```
+
+compost autodetect --target=comment --behavior=new_and_hide
+compost github pr 12 --behavior=new_and_hide
+compose github commit <sha> --behavior=new_and_hide

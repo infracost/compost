@@ -1,42 +1,63 @@
 import { flags } from '@oclif/command';
-import IntegrationComments, { Behavior } from '../..';
+import { args } from '@oclif/parser';
+import IntegrationComments from '../..';
 import { GitLabOptions } from '../../platforms/gitlab';
 import BaseCommand from '../base';
 
-export default class GitHubCommand extends BaseCommand {
+export default class GitLabCommand extends BaseCommand {
   static description = 'Post a comment to a GitLab merge request/commit';
 
   static flags = {
     ...BaseCommand.flags,
     'gitlab-token': flags.string({ description: 'GitLab token' }),
-    'gitlab-server-url': flags.string({
+    'server-url': flags.string({
       description: 'GitLab server URL',
       default: 'https://github.com',
     }),
-    'gitlab-project': flags.string({
+    project: flags.string({
       description: 'GitLab project (owner/repo)',
     }),
-    'gitlab-merge-request-number': flags.integer({
+    'merge-request-number': flags.integer({
       description: 'GitLab merge request number',
     }),
   };
 
-  static args = BaseCommand.args;
+  // fixup the args to use the term 'merge request' instead of 'pull request'.
+  static fixupBaseArgs(args: args.Input): args.Input {
+    return [
+      {
+        ...args[0],
+        options: ['mr', 'commit'],
+        parse(input: string) {
+          return input === 'pr' ? 'mr' : input;
+        },
+        description: 'Whether to post on a merge request or commit',
+      },
+      {
+        ...args[1],
+        description: 'The merge request number or commit SHA',
+      },
+      ...args.slice(2),
+    ];
+  }
+
+  static args = GitLabCommand.fixupBaseArgs(BaseCommand.args);
 
   async run() {
-    const { args, flags } = this.parse(GitHubCommand);
+    const { args, flags } = this.parse(GitLabCommand);
 
     const body = this.loadBody(flags);
 
     const opts: GitLabOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['gitlab-token'],
-      serverUrl: flags['gitlab-server-url'],
-      project: flags['gitlab-project'],
-      mergeRequestNumber: flags['gitlab-merge-request-number'],
+      serverUrl: flags['server-url'],
+      project: flags.project,
     };
 
+    const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
+
     const comments = new IntegrationComments(opts);
-    await comments.postComment('gitlab', args.behavior as Behavior, body);
+    await comments.postComment('gitlab', targetType, targetRef, behavior, body);
   }
 }

@@ -1,14 +1,15 @@
 import axios from 'axios';
 import { Comment, CommentHandlerOptions } from '.';
+import { DetectResult } from '..';
+import { Logger } from '../util';
 import BaseCommentHandler from './base';
 
-export type AzureDevOpsTfsOptions = {
+export type AzureDevOpsTfsOptions = CommentHandlerOptions & {
   token: string;
   collectionUri: string;
   teamProject: string;
   repositoryId: string;
-  pullRequestNumber: number;
-} & CommentHandlerOptions;
+};
 
 class AzureDevOpsTfsComment implements Comment {
   constructor(
@@ -32,28 +33,18 @@ class AzureDevOpsTfsComment implements Comment {
   }
 }
 
-export class AzureDevOpsTfsCommentHandler extends BaseCommentHandler<AzureDevOpsTfsComment> {
-  private token: string;
+abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsComment> {
+  protected token: string;
 
-  private collectionUri: string;
+  protected collectionUri: string;
 
-  private teamProject: string;
+  protected teamProject: string;
 
-  private repositoryId: string;
-
-  private pullRequestNumber: number;
+  protected repositoryId: string;
 
   constructor(opts?: AzureDevOpsTfsOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
-  }
-
-  static detect(): boolean {
-    return (
-      !!process.env.SYSTEM_COLLECTIONURI &&
-      process.env.BUILD_REASON === 'PullRequest' &&
-      process.env.BUILD_REPOSITORY_PROVIDER === 'TfsGit'
-    );
   }
 
   processOpts(opts?: AzureDevOpsTfsOptions): void {
@@ -79,29 +70,83 @@ export class AzureDevOpsTfsCommentHandler extends BaseCommentHandler<AzureDevOps
     this.repositoryId = opts?.repositoryId || process.env.BUILD_REPOSITORY_ID;
     if (!this.repositoryId) {
       this.errorHandler('BUILD_REPOSITORY_ID is required');
-      return;
-    }
-
-    this.pullRequestNumber =
-      opts?.pullRequestNumber ||
-      Number(process.env.SYSTEM_PULLREQUEST_PULLREQUESTID);
-
-    if (!this.pullRequestNumber) {
-      this.errorHandler('SYSTEM_PULLREQUEST_PULLREQUESTID is required');
-      return;
-    }
-
-    if (Number.isNaN(this.pullRequestNumber)) {
-      this.errorHandler('Invalid Azure DevOps (TFS) pull request number');
     }
   }
+}
 
-  async hideAndCreateComment(): Promise<void> {
-    this.errorHandler('Hiding comments is not supported by Azure DevOps (TFS)');
+export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
+  constructor(private prNumber: number, opts?: AzureDevOpsTfsOptions) {
+    super(opts as AzureDevOpsTfsOptions);
   }
 
-  async callHideComment(): Promise<void> {
-    this.errorHandler('Hiding comments is not supported by Azure DevOps (TFS)');
+  static detect(logger: Logger): DetectResult | null {
+    logger.debug('Checking for Azure DevOps (TFS) pull request');
+
+    if (!process.env.SYSTEM_COLLECTIONURI) {
+      logger.debug('SYSTEM_COLLECTIONURI environment variable is not set');
+      return null;
+    }
+
+    logger.debug(
+      `SYSTEM_COLLECTIONURI environment variable is set to ${process.env.SYSTEM_COLLECTIONURI}`
+    );
+
+    if (!process.env.BUILD_REPOSITORY_PROVIDER) {
+      logger.debug('BUILD_REPOSITORY_PROVIDER environment variable not set');
+      return null;
+    }
+
+    if (process.env.BUILD_REPOSITORY_PROVIDER !== 'TfsGit') {
+      logger.debug(
+        `BUILD_REPOSITORY_PROVIDER environment variable is set to ${process.env.BUILD_REPOSITORY_PROVIDER}, not to TfsGit`
+      );
+      return null;
+    }
+
+    if (!process.env.BUILD_REASON) {
+      logger.debug('BUILD_REASON environment variable not set');
+      return null;
+    }
+
+    if (process.env.BUILD_REASON !== 'PullRequest') {
+      logger.debug(
+        `BUILD_REASON environment variable is set to ${process.env.BUILD_REASON}, not to PullRequest`
+      );
+      return null;
+    }
+
+    if (process.env.BUILD_REASON !== 'PullRequest') {
+      logger.debug(
+        'BUILD_REASON environment variable is not set to PullRequest'
+      );
+      return null;
+    }
+
+    if (!process.env.SYSTEM_PULLREQUEST_PULLREQUESTID) {
+      logger.debug(
+        'SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not set'
+      );
+      return null;
+    }
+
+    logger.debug(
+      `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is set to ${process.env.SYSTEM_PULLREQUEST_PULLREQUESTID}`
+    );
+
+    const prNumber = Number(process.env.SYSTEM_PULLREQUEST_PULLREQUESTID);
+
+    if (Number.isNaN(prNumber)) {
+      logger.debug(
+        `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not a valid number`
+      );
+      return null;
+    }
+
+    return {
+      platform: 'azure-devops-tfs',
+      targetType: 'pr',
+      targetRef: prNumber,
+    };
   }
 
   async callFindMatchingComments(
@@ -122,7 +167,7 @@ export class AzureDevOpsTfsCommentHandler extends BaseCommentHandler<AzureDevOps
         }[];
       }[];
     }>(
-      `${this.collectionUri}${this.teamProject}/_apis/git/repositories/${this.repositoryId}/pullRequests/${this.pullRequestNumber}/threads?api-version=6.0`,
+      `${this.collectionUri}${this.teamProject}/_apis/git/repositories/${this.repositoryId}/pullRequests/${this.prNumber}/threads?api-version=6.0`,
       {
         headers: {
           Authorization: `Basic ${this.token}`,
@@ -172,7 +217,7 @@ export class AzureDevOpsTfsCommentHandler extends BaseCommentHandler<AzureDevOps
         };
       }[];
     }>(
-      `${this.collectionUri}${this.teamProject}/_apis/git/repositories/${this.repositoryId}/pullRequests/${this.pullRequestNumber}/threads?api-version=6.0`,
+      `${this.collectionUri}${this.teamProject}/_apis/git/repositories/${this.repositoryId}/pullRequests/${this.prNumber}/threads?api-version=6.0`,
       {
         comments: [
           {
@@ -232,4 +277,8 @@ export class AzureDevOpsTfsCommentHandler extends BaseCommentHandler<AzureDevOps
       },
     });
   }
+
+  callHideComment = this.unsupported(
+    'Hiding comments is not supported by Azure DevOps (TFS)'
+  );
 }

@@ -19,10 +19,6 @@ export default abstract class BaseCommentHandler<C extends Comment>
     this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
   }
 
-  static autoDetect(): boolean {
-    return false;
-  }
-
   async updateComment(body: string): Promise<void> {
     const bodyWithTag = markdownComment(body, this.tag);
 
@@ -84,7 +80,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
       }`
     );
 
-    await this.hideComments(matchingComments);
+    await this.hidePrComments(matchingComments);
 
     this.logger.info('Creating new comment');
     const comment = await this.callCreateComment(bodyWithTag);
@@ -104,14 +100,14 @@ export default abstract class BaseCommentHandler<C extends Comment>
       }`
     );
 
-    await this.deleteComments(matchingComments);
+    await this.deletePrComments(matchingComments);
 
     this.logger.info('Creating new comment');
     const comment = await this.callCreateComment(bodyWithTag);
     this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
   }
 
-  private async deleteComments(comments: C[]): Promise<void> {
+  private async deletePrComments(comments: C[]): Promise<void> {
     this.logger.info(
       `Deleting ${comments.length} comment${comments.length === 1 ? '' : 's'}`
     );
@@ -132,7 +128,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
     await Promise.all(promises);
   }
 
-  private async hideComments(comments: C[]): Promise<void> {
+  private async hidePrComments(comments: C[]): Promise<void> {
     this.logger.info(
       `Hiding ${comments.length} comment${comments.length === 1 ? '' : 's'}`
     );
@@ -162,6 +158,13 @@ export default abstract class BaseCommentHandler<C extends Comment>
   abstract callHideComment(comment: C): Promise<void>;
 
   abstract callDeleteComment(comment: C): Promise<void>;
+
+  unsupported(message: string): () => never {
+    return () => {
+      this.errorHandler(message);
+      throw new Error(message);
+    };
+  }
 }
 
 function markdownTag(s: string) {

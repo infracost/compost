@@ -2,14 +2,15 @@ import { Octokit } from 'octokit';
 import { Repository } from '@octokit/graphql-schema';
 import { Comment, CommentHandlerOptions } from '.';
 import BaseCommentHandler from './base';
+import { DetectResult } from '..';
+import { Logger } from '../util';
 
-export type GitHubOptions = {
+export type GitHubOptions = CommentHandlerOptions & {
   token: string;
   apiUrl: string;
   owner: string;
   repo: string;
-  pullRequestNumber: number;
-} & CommentHandlerOptions;
+};
 
 class GitHubComment implements Comment {
   constructor(
@@ -33,29 +34,23 @@ class GitHubComment implements Comment {
   }
 }
 
-export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
-  private token: string;
+abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
+  protected token: string;
 
-  private apiUrl: string;
+  protected apiUrl: string;
 
-  private owner: string;
+  protected owner: string;
 
-  private repo: string;
+  protected repo: string;
 
-  private pullRequestNumber: number;
-
-  private octokit: Octokit;
+  protected octokit: Octokit;
 
   constructor(opts?: GitHubOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
   }
 
-  static detect(): boolean {
-    return process.env.GITHUB_ACTIONS === 'true';
-  }
-
-  processOpts(opts?: GitHubOptions): void {
+  private processOpts(opts?: GitHubOptions): void {
     this.token = opts?.token || process.env.GITHUB_TOKEN;
     if (!this.token) {
       this.errorHandler('GITHUB_TOKEN is required');
@@ -79,23 +74,53 @@ export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
       }
     }
 
-    this.pullRequestNumber =
-      opts?.pullRequestNumber || Number(process.env.GITHUB_PULL_REQUEST_NUMBER);
-
-    if (!this.pullRequestNumber) {
-      this.errorHandler('GITHUB_PULL_REQUEST_NUMBER is required');
-      return;
-    }
-
-    if (Number.isNaN(this.pullRequestNumber)) {
-      this.errorHandler('Invalid GitHub pull request number');
-      return;
-    }
-
     this.octokit = new Octokit({
       auth: this.token,
       apiUrl: this.apiUrl,
     });
+  }
+}
+
+export class GitHubPrHandler extends GitHubHandler {
+  constructor(private prNumber: number, opts?: GitHubOptions) {
+    super(opts as GitHubOptions);
+  }
+
+  static detect(logger: Logger): DetectResult | null {
+    logger.debug('Checking for GitHub Actions pull request');
+
+    if (process.env.GITHUB_ACTIONS !== 'true') {
+      logger.debug('GITHUB_ACTIONS environment variable is not set to true');
+      return null;
+    }
+
+    logger.debug('GITHUB_ACTIONS environment variable is set to true');
+
+    if (!process.env.GITHUB_PULL_REQUEST_NUMBER) {
+      logger.debug(
+        'GITHUB_PULL_REQUEST_NUMBER environment variable is not set'
+      );
+      return null;
+    }
+
+    logger.debug(
+      `GITHUB_PULL_REQUEST_NUMBER environment variable is set to ${process.env.GITHUB_PULL_REQUEST_NUMBER}`
+    );
+
+    const prNumber = Number(process.env.GITHUB_PULL_REQUEST_NUMBER);
+
+    if (Number.isNaN(prNumber)) {
+      logger.debug(
+        `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
+      );
+      return null;
+    }
+
+    return {
+      platform: 'github',
+      targetType: 'pr',
+      targetRef: prNumber,
+    };
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
@@ -107,9 +132,9 @@ export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
     while (hasNextPage) {
       const data = await this.octokit.graphql<{ repository?: Repository }>(
         `
-        query($repo: String! $owner: String! $pullRequestNumber: Int! $after: String) {
+        query($repo: String! $owner: String! $prNumber: Int! $after: String) {
           repository(name: $repo owner: $owner) {
-            pullRequest(number: $pullRequestNumber) {
+            pullRequest(number: $prNumber) {
               comments(first: 100 after: $after) {
                 nodes {
                   id
@@ -130,7 +155,7 @@ export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
         {
           owner: this.owner,
           repo: this.repo,
-          pullRequestNumber: this.pullRequestNumber,
+          prNumber: this.prNumber,
           after,
         }
       );
@@ -155,7 +180,7 @@ export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
     const resp = await this.octokit.rest.issues.createComment({
       owner: this.owner,
       repo: this.repo,
-      issue_number: this.pullRequestNumber,
+      issue_number: this.prNumber,
       body,
     });
 
@@ -219,4 +244,70 @@ export class GitHubCommentHandler extends BaseCommentHandler<GitHubComment> {
       }
     );
   }
+}
+
+export class GitHubCommitHandler extends GitHubHandler {
+  constructor(private commitSha: string, opts?: GitHubOptions) {
+    super(opts as GitHubOptions);
+  }
+
+  static detect(logger: Logger): DetectResult | null {
+    logger.debug('Checking for GitHub Actions commit');
+
+    if (process.env.GITHUB_ACTIONS !== 'true') {
+      logger.debug('GITHUB_ACTIONS environment variable is not set to true');
+      return null;
+    }
+
+    logger.debug('GITHUB_ACTIONS environment variable is set to true');
+
+    if (!process.env.GITHUB_COMMIT_SHA) {
+      logger.debug('GITHUB_COMMIT_SHA environment variable is not set');
+      return null;
+    }
+
+    logger.debug(
+      `GITHUB_COMMIT_SHA environment variable is set to ${process.env.GITHUB_COMMIT_SHA}`
+    );
+
+    return {
+      platform: 'github',
+      targetType: 'commit',
+      targetRef: process.env.GITHUB_COMMIT_SHA,
+    };
+  }
+
+  async callCreateComment(body: string): Promise<GitHubComment> {
+    // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Pull Request ID as well
+    const resp = await this.octokit.rest.repos.createCommitComment({
+      owner: this.owner,
+      repo: this.repo,
+      commit_sha: this.commitSha,
+      body,
+    });
+
+    return new GitHubComment(
+      resp.data.id.toString(),
+      resp.data.body,
+      resp.data.created_at,
+      resp.data.url,
+      false
+    );
+  }
+
+  callFindMatchingComments = this.unsupported(
+    'Finding matching comments on GitHub commits is not currently supported'
+  );
+
+  callUpdateComment = this.unsupported(
+    'Updating comments on GitHub commits is not currently supported'
+  );
+
+  callDeleteComment = this.unsupported(
+    'Deleting comments on GitHub commits is not currently supported'
+  );
+
+  callHideComment = this.unsupported(
+    'Hiding comments on GitHub commits is not currently supported'
+  );
 }

@@ -1,7 +1,8 @@
 import fs from 'fs';
 import { Command, flags } from '@oclif/command';
-import { OutputFlags } from '@oclif/parser';
+import { args, OutputArgs, OutputFlags } from '@oclif/parser';
 import { Logger } from '../util';
+import { Behavior, TargetReference, TargetType } from '..';
 import { CommentHandlerOptions } from '../platforms';
 
 export default abstract class BaseCommand extends Command {
@@ -23,7 +24,21 @@ export default abstract class BaseCommand extends Command {
     }),
   };
 
-  static args = [
+  static args: args.Input = [
+    {
+      name: 'target_type',
+      required: true,
+      options: ['pr', 'commit'],
+      parse(input: string) {
+        return input === 'mr' ? 'pr' : input;
+      },
+      description: 'Whether to post on a pull request or commit',
+    },
+    {
+      name: 'target_ref',
+      required: true,
+      description: 'The pull request number or commit SHA',
+    },
     {
       name: 'behavior',
       required: true,
@@ -61,6 +76,30 @@ export default abstract class BaseCommand extends Command {
       tag: flags.tag,
       logger: this.wrapLogger(),
       errorHandler: this.error,
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  loadBaseArgs(args: OutputArgs<any>): {
+    targetType: TargetType;
+    targetRef: TargetReference;
+    behavior: Behavior;
+  } {
+    const targetType = args.target_type as TargetType;
+    const behavior = args.behavior as Behavior;
+
+    let targetRef: TargetReference = args.target_ref;
+    if (targetType === 'pr' || targetType === 'mr') {
+      targetRef = parseInt(targetRef as string, 10);
+      if (Number.isNaN(targetRef)) {
+        this.error(`target_ref must be a number`);
+      }
+    }
+
+    return {
+      targetType,
+      targetRef,
+      behavior,
     };
   }
 }
