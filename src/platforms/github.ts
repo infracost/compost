@@ -257,7 +257,7 @@ export class GitHubCommitHandler extends GitHubHandler {
   }
 
   async callCreateComment(body: string): Promise<GitHubComment> {
-    // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Pull Request ID as well
+    // Commit comments aren't supported by the GraphQL API
     const resp = await this.octokit.rest.repos.createCommitComment({
       owner: this.owner,
       repo: this.repo,
