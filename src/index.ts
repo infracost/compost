@@ -68,7 +68,7 @@ function commentHandlerFactory(
   return null;
 }
 
-export default class IntegrationComments {
+export default class Compost {
   opts: Options;
 
   private logger: Logger;

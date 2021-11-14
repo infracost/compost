@@ -1,5 +1,5 @@
 import { flags } from '@oclif/command';
-import IntegrationComments from '../..';
+import Compost from '../..';
 import { AzureDevOpsTfsOptions } from '../../platforms/azureDevOpsTfs';
 import BaseCommand from '../base';
 
@@ -53,7 +53,7 @@ export default class AzureDevOpsTfsCommand extends BaseCommand {
 
     const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
 
-    const comments = new IntegrationComments(opts);
+    const comments = new Compost(opts);
     await comments.postComment(
       'azure-devops-tfs',
       targetType,

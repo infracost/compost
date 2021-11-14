@@ -1,5 +1,5 @@
 import { flags } from '@oclif/command';
-import IntegrationComments from '../..';
+import Compost from '../..';
 import { GitHubOptions } from '../../platforms/github';
 import BaseCommand from '../base';
 
@@ -38,7 +38,7 @@ export default class GitHubCommand extends BaseCommand {
 
     const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
 
-    const comments = new IntegrationComments(opts);
+    const comments = new Compost(opts);
     await comments.postComment('github', targetType, targetRef, behavior, body);
   }
 }

@@ -1,6 +1,6 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
-import IntegrationComments from '../..';
+import Compost from '../..';
 import { GitLabOptions } from '../../platforms/gitlab';
 import BaseCommand from '../base';
 
@@ -57,7 +57,7 @@ export default class GitLabCommand extends BaseCommand {
 
     const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
 
-    const comments = new IntegrationComments(opts);
+    const comments = new Compost(opts);
     await comments.postComment('gitlab', targetType, targetRef, behavior, body);
   }
 }

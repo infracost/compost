@@ -1,4 +1,4 @@
-import IntegrationComments, { Behavior } from '../..';
+import Compost, { Behavior } from '../..';
 import BaseCommand from '../base';
 
 export default class AutoDetect extends BaseCommand {
@@ -17,7 +17,7 @@ export default class AutoDetect extends BaseCommand {
 
     const opts = this.loadBaseOptions(flags);
 
-    const comments = new IntegrationComments(opts);
+    const comments = new Compost(opts);
 
     const detectResult = comments.detectEnvironment();
     if (!detectResult) {
