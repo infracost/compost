@@ -27,28 +27,28 @@ export default abstract class BaseCommand extends Command {
   static args: args.Input = [
     {
       name: 'project',
-      required: true,
       description: 'Project name in format owner/repo',
+      required: true,
     },
     {
       name: 'target_type',
+      description: 'Whether to post on a pull request or commit',
       required: true,
       options: ['pr', 'commit'],
       parse(input: string) {
         return input === 'mr' ? 'pr' : input;
       },
-      description: 'Whether to post on a pull request or commit',
     },
     {
       name: 'target_ref',
-      required: true,
       description: 'The pull request number or commit SHA',
+      required: true,
     },
     {
       name: 'behavior',
+      description: 'Behavior when posting the comment',
       required: true,
       options: ['update', 'new', 'hide_and_new', 'delete_and_new'],
-      description: 'Behavior when posting the comment',
     },
   ];
 

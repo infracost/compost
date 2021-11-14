@@ -116,18 +116,41 @@ export default class Compost {
     return handler;
   }
 
-  detectEnvironment(): DetectResult | null {
+  detectEnvironment(targetTypes?: string[]): DetectResult | null {
     const commentHandlerConfigs = [
-      { handler: GitHubPrHandler, displayName: 'GitHub pull request' },
-      { handler: GitHubCommitHandler, displayName: 'GitHub comment' },
-      { handler: GitLabMrHandler, displayName: 'GitLab merge request' },
+      {
+        handler: GitHubPrHandler,
+        displayName: 'GitHub pull request',
+        supportedTargetTypes: ['pr', 'mr'],
+      },
+      {
+        handler: GitHubCommitHandler,
+        displayName: 'GitHub comment',
+        supportedTargetTypes: ['commit'],
+      },
+      {
+        handler: GitLabMrHandler,
+        displayName: 'GitLab merge request',
+        supportedTargetTypes: ['pr', 'mr'],
+      },
       {
         handler: AzureDevOpsTfsPrHandler,
         displayName: 'Azure DevOps (TFS) pull request',
+        supportedTargetTypes: ['pr', 'mr'],
       },
     ];
 
     for (const config of commentHandlerConfigs) {
+      if (
+        targetTypes !== undefined &&
+        !config.supportedTargetTypes.some((t) => targetTypes.includes(t))
+      ) {
+        this.logger.debug(
+          `Skipping checking ${config.displayName} since it does not support any of the target types ${targetTypes}`
+        );
+        continue;
+      }
+
       const platform = config.handler.detect(this.logger);
       if (platform) {
         this.logger.info(`Detected ${config.displayName}`);
