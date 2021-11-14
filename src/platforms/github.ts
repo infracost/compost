@@ -1,9 +1,9 @@
 import { Octokit } from 'octokit';
 import { Repository } from '@octokit/graphql-schema';
-import { Comment, CommentHandlerOptions } from '.';
-import BaseCommentHandler from './base';
-import { DetectResult } from '..';
+import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
+import { CommentHandlerOptions, DetectResult } from '../types';
+import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
 
 export type GitHubOptions = CommentHandlerOptions & {
   token: string;
@@ -76,6 +76,10 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
 }
 
 export class GitHubPrHandler extends GitHubHandler {
+  displayName = 'GitHub pull requests';
+
+  supportedTargetTypes = ['pr', 'mr'];
+
   constructor(project: string, private prNumber: number, opts?: GitHubOptions) {
     super(project, opts as GitHubOptions);
   }
@@ -83,30 +87,12 @@ export class GitHubPrHandler extends GitHubHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for GitHub Actions pull request');
 
-    if (process.env.GITHUB_ACTIONS !== 'true') {
-      logger.debug('GITHUB_ACTIONS environment variable is not set to true');
-      return null;
-    }
-    logger.debug('GITHUB_ACTIONS environment variable is set to true');
-
-    const project = process.env.GITHUB_REPOSITORY;
-    if (!project) {
-      logger.debug('GITHUB_REPOSITORY environment variable is not set');
-      return null;
-    }
-    logger.debug(`GITHUB_REPOSITORY environment variable is set to ${project}`);
-
-    if (!process.env.GITHUB_PULL_REQUEST_NUMBER) {
-      logger.debug(
-        'GITHUB_PULL_REQUEST_NUMBER environment variable is not set'
-      );
-      return null;
-    }
-    logger.debug(
-      `GITHUB_PULL_REQUEST_NUMBER environment variable is set to ${process.env.GITHUB_PULL_REQUEST_NUMBER}`
+    checkEnvVarValue('GITHUB_ACTIONS', 'true', logger);
+    const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
+    const prNumber = Number.parseInt(
+      checkEnvVarExists('GITHUB_PULL_REQUEST_NUMBER', logger),
+      10
     );
-
-    const prNumber = Number(process.env.GITHUB_PULL_REQUEST_NUMBER);
 
     if (Number.isNaN(prNumber)) {
       logger.debug(
@@ -258,33 +244,15 @@ export class GitHubCommitHandler extends GitHubHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for GitHub Actions commit');
 
-    if (process.env.GITHUB_ACTIONS !== 'true') {
-      logger.debug('GITHUB_ACTIONS environment variable is not set to true');
-      return null;
-    }
-    logger.debug('GITHUB_ACTIONS environment variable is set to true');
-
-    const project = process.env.GITHUB_REPOSITORY;
-    if (!project) {
-      logger.debug('GITHUB_REPOSITORY environment variable is not set');
-      return null;
-    }
-
-    logger.debug(`GITHUB_REPOSITORY environment variable is set to ${project}`);
-
-    if (!process.env.GITHUB_COMMIT_SHA) {
-      logger.debug('GITHUB_COMMIT_SHA environment variable is not set');
-      return null;
-    }
-    logger.debug(
-      `GITHUB_COMMIT_SHA environment variable is set to ${process.env.GITHUB_COMMIT_SHA}`
-    );
+    checkEnvVarValue('GITHUB_ACTIONS', 'true', logger);
+    const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
+    const commitSha = checkEnvVarExists('GITHUB_COMMIT_SHA', logger);
 
     return {
       platform: 'github',
       project,
       targetType: 'commit',
-      targetRef: process.env.GITHUB_COMMIT_SHA,
+      targetRef: commitSha,
     };
   }
 

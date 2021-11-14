@@ -11,7 +11,6 @@ export default class GitHubCommand extends BaseCommand {
 
    $ compost github infracost/compost-example pr 3 update --body="my comment"
 `,
-
     `• Update a comment on a commit:
     
    $ compost github infracost/compost-example commit 2ca7182 update --body="my comment",`,

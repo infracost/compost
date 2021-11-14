@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { Comment, CommentHandlerOptions } from '.';
-import { DetectResult } from '..';
+import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
-import BaseCommentHandler from './base';
+import { CommentHandlerOptions, DetectResult } from '../types';
+import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
 
 export type GitLabOptions = CommentHandlerOptions & {
   token: string;
@@ -61,28 +61,12 @@ export class GitLabMrHandler extends GitLabHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for GitLab CI merge request');
 
-    if (process.env.GITLAB_CI !== 'true') {
-      logger.debug('GITLAB_CI environment variable is not set to true');
-      return null;
-    }
-    logger.debug('GITLAB_CI environment variable is set to true');
-
-    const project = process.env.CI_PROJECT_PATH;
-    if (!project) {
-      logger.debug('CI_PROJECT_PATH environment variable is not set');
-      return null;
-    }
-    logger.debug(`CI_PROJECT_PATH environment variable is set to ${project}`);
-
-    if (!process.env.CI_MERGE_REQUEST_IID) {
-      logger.debug('CI_MERGE_REQUEST_IID environment variable is not set');
-      return null;
-    }
-    logger.debug(
-      `CI_MERGE_REQUEST_IID environment variable is set to ${process.env.CI_MERGE_REQUEST_IID}`
+    checkEnvVarValue('GITLAB_CI', 'true', logger);
+    const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
+    const mrNumber = Number.parseInt(
+      checkEnvVarExists('CI_MERGE_REQUEST_IID', logger),
+      10
     );
-
-    const mrNumber = Number(process.env.CI_MERGE_REQUEST_IID);
 
     if (Number.isNaN(mrNumber)) {
       logger.debug(

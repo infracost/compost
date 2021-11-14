@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { Comment, CommentHandlerOptions } from '.';
-import { DetectResult } from '..';
+import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
-import BaseCommentHandler from './base';
+import { CommentHandlerOptions, DetectResult } from '../types';
+import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
 
 export type AzureDevOpsTfsOptions = CommentHandlerOptions & {
   token: string;
@@ -93,76 +93,18 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for Azure DevOps (TFS) pull request');
 
-    if (!process.env.SYSTEM_COLLECTIONURI) {
-      logger.debug('SYSTEM_COLLECTIONURI environment variable is not set');
-      return null;
-    }
-    logger.debug(
-      `SYSTEM_COLLECTIONURI environment variable is set to ${process.env.SYSTEM_COLLECTIONURI}`
-    );
+    const collectionUri = checkEnvVarExists('SYSTEM_COLLECTIONURI', logger);
     // The collection URI is in the format https://dev.azure.com/org/
-    const org = process.env.SYSTEM_COLLECTIONURI.replace(/\/+$/, '')
-      .split('/')
-      .at(-1);
+    const org = collectionUri.replace(/\/+$/, '').split('/').at(-1);
 
-    if (!process.env.BUILD_REPOSITORY_PROVIDER) {
-      logger.debug('BUILD_REPOSITORY_PROVIDER environment variable not set');
-      return null;
-    }
-    if (process.env.BUILD_REPOSITORY_PROVIDER !== 'TfsGit') {
-      logger.debug(
-        `BUILD_REPOSITORY_PROVIDER environment variable is set to ${process.env.BUILD_REPOSITORY_PROVIDER}, not to TfsGit`
-      );
-      return null;
-    }
-    if (!process.env.BUILD_REASON) {
-      logger.debug('BUILD_REASON environment variable not set');
-      return null;
-    }
+    checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger);
 
-    if (process.env.BUILD_REASON !== 'PullRequest') {
-      logger.debug(
-        `BUILD_REASON environment variable is set to ${process.env.BUILD_REASON}, not to PullRequest`
-      );
-      return null;
-    }
-    if (process.env.BUILD_REASON !== 'PullRequest') {
-      logger.debug(
-        'BUILD_REASON environment variable is not set to PullRequest'
-      );
-      return null;
-    }
-
-    const teamProject = process.env.SYSTEM_TEAMPROJECT;
-    if (!teamProject) {
-      logger.debug('SYSTEM_TEAMPROJECT environment variable is not set');
-      return null;
-    }
-    logger.debug(
-      `SYSTEM_TEAMPROJECT environment variable is set to ${teamProject}`
+    const teamProject = checkEnvVarExists('SYSTEM_TEAMPROJECT', logger);
+    const repo = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
+    const prNumber = Number.parseInt(
+      checkEnvVarExists('SYSTEM_PULLREQUEST_PULLREQUESTID', logger),
+      10
     );
-
-    const repo = process.env.BUILD_REPOSITORY_NAME;
-    if (!repo) {
-      logger.debug('BUILD_REPOSITORY_NAME environment variable is not set');
-      return null;
-    }
-    logger.debug(
-      `BUILD_REPOSITORY_NAME environment variable is set to ${repo}`
-    );
-
-    if (!process.env.SYSTEM_PULLREQUEST_PULLREQUESTID) {
-      logger.debug(
-        'SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not set'
-      );
-      return null;
-    }
-
-    logger.debug(
-      `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is set to ${process.env.SYSTEM_PULLREQUEST_PULLREQUESTID}`
-    );
-
-    const prNumber = Number(process.env.SYSTEM_PULLREQUEST_PULLREQUESTID);
 
     if (Number.isNaN(prNumber)) {
       logger.debug(

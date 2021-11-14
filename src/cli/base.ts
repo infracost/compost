@@ -2,8 +2,12 @@ import fs from 'fs';
 import { Command, flags } from '@oclif/command';
 import { args, OutputArgs, OutputFlags } from '@oclif/parser';
 import { Logger } from '../util';
-import { Behavior, TargetReference, TargetType } from '..';
-import { CommentHandlerOptions } from '../platforms';
+import {
+  CommentHandlerOptions,
+  TargetType,
+  TargetReference,
+  Behavior,
+} from '../types';
 
 export default abstract class BaseCommand extends Command {
   static flags = {
@@ -122,4 +126,45 @@ export default abstract class BaseCommand extends Command {
       behavior,
     };
   }
+}
+
+// Checks and logs if the env variable exists and returns the value if it does
+export function checkEnvVarExists(
+  name: string,
+  logger?: Logger
+): string | undefined {
+  const value = process.env[name];
+  if (value === undefined) {
+    if (logger) {
+      logger.debug(`${name} environment variable is not set`);
+    }
+    return undefined;
+  }
+
+  logger.debug(`${name} is set to ${value}`);
+
+  return value;
+}
+
+// Checks and logs if the env variable equals the expected value
+export function checkEnvVarValue(
+  name: string,
+  expectedValue: string,
+  logger?: Logger
+): boolean {
+  const value = checkEnvVarExists(name, logger);
+  if (value === undefined) {
+    return false;
+  }
+
+  if (value !== expectedValue) {
+    if (logger) {
+      logger.debug(
+        `${name} environment variable is set to ${value}, not ${expectedValue}`
+      );
+    }
+    return false;
+  }
+
+  return true;
 }

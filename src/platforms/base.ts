@@ -1,8 +1,15 @@
 import chalk from 'chalk';
-import { Comment, CommentHandler, CommentHandlerOptions } from '.';
+import { CommentHandler, CommentHandlerOptions } from '../types';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from '../util';
 
 const defaultTag = 'compost-comment';
+
+export interface Comment {
+  body: string;
+  ref(): string;
+  isHidden(): boolean;
+  sortKey(): string;
+}
 
 export default abstract class BaseCommentHandler<C extends Comment>
   implements CommentHandler

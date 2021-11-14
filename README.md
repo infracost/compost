@@ -6,11 +6,11 @@ Compost (WIP name) is for tools that run in CI pipelines and want to post result
 
 It currently detects the following CI environments:
 * GitHub Actions
-* GitLab CI
+* GitLab CI (merge requests only)
 * Azure DevOps (TFS)
+* Azure DevOps (GitHub)
 
 Coming soon:
-* Azure DevOps (GitHub)
 * BitBucket
 * Circle CI (GitHub)
 * CircleCI (BitBucket)
@@ -59,7 +59,7 @@ compost github infracost/compost-example pr 3 --body="my PR comment"
 Post a comment to a specific GitHub commit SHA
 
 ```sh
-compose github infracost/compost-example commit 2ce7122 --body="my commit comment"
+compose github infracost/compost-example commit 2ca7182 --body="my commit comment"
 ```
 
 ## Flags

@@ -1,5 +1,6 @@
 import { flags } from '@oclif/parser';
-import Compost, { Behavior } from '../..';
+import Compost from '../..';
+import { Behavior, Platform } from '../../types';
 import BaseCommand from '../base';
 
 export default class AutoDetect extends BaseCommand {
@@ -11,7 +12,6 @@ export default class AutoDetect extends BaseCommand {
 
    $ compost autodetect update --body="my comment"
 `,
-
     `• Post a new comment:
 
    $ compost autodetect new --body="my new comment"
@@ -20,7 +20,6 @@ export default class AutoDetect extends BaseCommand {
 
    $ compost autodetect delete_and_new --body="my new comment"
 `,
-
     `• Hide the previous posted comments and post a new comment (GitHub only):
 
    $ compost autodetect hide_and_new --body="my new comment"`,
@@ -55,7 +54,7 @@ export default class AutoDetect extends BaseCommand {
     const { platform, project, targetType, targetRef } = detectResult;
 
     await comments.postComment(
-      platform,
+      platform as Platform,
       project,
       targetType,
       targetRef,
