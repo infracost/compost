@@ -19,6 +19,7 @@ Coming soon:
 
 ```sh
 git clone git@github.com:infracost/compost.git
+npm install
 npm link
 ```
 
