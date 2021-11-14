@@ -18,7 +18,8 @@ Coming soon:
 ## Install
 
 ```sh
-npm install -g git://github.com/infracost/compost.git
+git clone git@github.com:infracost/compost.git
+npm link
 ```
 
 ## Examples
