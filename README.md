@@ -2,7 +2,7 @@
 
 **WIP**
 
-Compost is for tools that run in CI pipelines and want to post results as pull request/commit comments.
+Compost (WIP name) is for tools that run in CI pipelines and want to post results as pull request/commit comments.
 
 It currently detects the following CI environments:
 * GitHub Actions
@@ -65,9 +65,9 @@ compose github infracost/compost-example commit 2ce7122 --body="my commit commen
 | Name | Description |
 |-|-|
 | `--body` | Specify the comment body content.
-| `--body-file` | Specify a path to a file containing the comment body. Mutually exclusive with `--body`.
-| `--tag` | Customize the comment tag. This is added to the comment as a markdown comment to detect the previously posted comments. |
-| `--target-type` | Options: `pr`, `mr`, `commit`. Only supported by `autodetect` command. Limit the auto-detection to add the comment to either pull/merge requests or commits. |
+| `--body-file` | Specify a path to a file containing the comment body.<br />Mutually exclusive with `--body`.
+| `--tag` | Customize the comment tag.<br />This is added to the comment as a markdown comment to detect the previously posted comments. |
+| `--target-type` | Options: `pr`, `mr`, `commit`.<br />Only supported by `autodetect` command.\nLimit the auto-detection to add the comment to either pull/merge requests or commits. |
 
 
 
