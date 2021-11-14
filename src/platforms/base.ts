@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { Comment, CommentHandler, CommentHandlerOptions } from '.';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from '../util';
 
-const defaultTag = 'infracost-integration-comment';
+const defaultTag = 'compost-comment';
 
 export default abstract class BaseCommentHandler<C extends Comment>
   implements CommentHandler

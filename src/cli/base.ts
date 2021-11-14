@@ -26,6 +26,11 @@ export default abstract class BaseCommand extends Command {
 
   static args: args.Input = [
     {
+      name: 'project',
+      required: true,
+      description: 'Project name in format owner/repo',
+    },
+    {
       name: 'target_type',
       required: true,
       options: ['pr', 'commit'],
@@ -93,10 +98,12 @@ export default abstract class BaseCommand extends Command {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   loadBaseArgs(args: OutputArgs<any>): {
+    project: string;
     targetType: TargetType;
     targetRef: TargetReference;
     behavior: Behavior;
   } {
+    const { project } = args;
     const targetType = args.target_type as TargetType;
     const behavior = args.behavior as Behavior;
 
@@ -109,6 +116,7 @@ export default abstract class BaseCommand extends Command {
     }
 
     return {
+      project,
       targetType,
       targetRef,
       behavior,

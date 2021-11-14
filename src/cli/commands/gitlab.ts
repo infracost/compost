@@ -10,23 +10,18 @@ export default class GitLabCommand extends BaseCommand {
   static flags = {
     ...BaseCommand.flags,
     'gitlab-token': flags.string({ description: 'GitLab token' }),
-    'server-url': flags.string({
+    'gitlab-server-url': flags.string({
       description: 'GitLab server URL',
-      default: 'https://github.com',
-    }),
-    project: flags.string({
-      description: 'GitLab project (owner/repo)',
-    }),
-    'merge-request-number': flags.integer({
-      description: 'GitLab merge request number',
+      default: 'https://gitlab.com',
     }),
   };
 
   // fixup the args to use the term 'merge request' instead of 'pull request'.
   static fixupBaseArgs(args: args.Input): args.Input {
     return [
+      args[0],
       {
-        ...args[0],
+        ...args[1],
         options: ['mr', 'commit'],
         parse(input: string) {
           return input === 'pr' ? 'mr' : input;
@@ -34,10 +29,10 @@ export default class GitLabCommand extends BaseCommand {
         description: 'Whether to post on a merge request or commit',
       },
       {
-        ...args[1],
+        ...args[2],
         description: 'The merge request number or commit SHA',
       },
-      ...args.slice(2),
+      ...args.slice(3),
     ];
   }
 
@@ -48,16 +43,23 @@ export default class GitLabCommand extends BaseCommand {
 
     const body = this.loadBody(flags);
 
+    const { project, targetType, targetRef, behavior } =
+      this.loadBaseArgs(args);
+
     const opts: GitLabOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['gitlab-token'],
-      serverUrl: flags['server-url'],
-      project: flags.project,
+      serverUrl: flags['gitlab-server-url'],
     };
 
-    const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
-
     const comments = new Compost(opts);
-    await comments.postComment('gitlab', targetType, targetRef, behavior, body);
+    await comments.postComment(
+      'gitlab',
+      project,
+      targetType,
+      targetRef,
+      behavior,
+      body
+    );
   }
 }

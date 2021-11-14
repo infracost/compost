@@ -1,4 +1,5 @@
 import { flags } from '@oclif/command';
+import { args } from '@oclif/parser';
 import Compost from '../..';
 import { AzureDevOpsTfsOptions } from '../../platforms/azureDevOpsTfs';
 import BaseCommand from '../base';
@@ -12,50 +13,43 @@ export default class AzureDevOpsTfsCommand extends BaseCommand {
     'azure-devops-token': flags.string({
       description: 'Azure DevOps token',
     }),
-    'collection-uri': flags.string({
-      description: 'Azure DevOps (TFS) collection URI',
-    }),
-    'team-project': flags.string({
-      description: 'Azure DevOps (TFS) team project',
-    }),
-    'repository-id': flags.string({
-      description: 'Azure DevOps (TFS) repository ID',
+    'azure-devops-server-url': flags.string({
+      description: 'Azure DevOps server URL',
+      default: 'https://dev.azure.com',
     }),
   };
 
-  static args = [
-    ...BaseCommand.args,
-    {
-      name: 'targetType',
-      required: true,
-      options: ['pr'],
-      description: 'Whether to post on a pull request or commit',
-    },
-    {
-      name: 'targetReference',
-      required: true,
-      description: 'The pull request number or commit SHA ',
-    },
-  ];
+  // fixup the args to specify the project format.
+  static fixupBaseArgs(args: args.Input): args.Input {
+    return [
+      {
+        ...args[0],
+        description: 'Project name in format org/teamProject/repo',
+      },
+      ...args.slice(1),
+    ];
+  }
+
+  static args = AzureDevOpsTfsCommand.fixupBaseArgs(BaseCommand.args);
 
   async run() {
     const { args, flags } = this.parse(AzureDevOpsTfsCommand);
 
     const body = this.loadBody(flags);
 
+    const { project, targetType, targetRef, behavior } =
+      this.loadBaseArgs(args);
+
     const opts: AzureDevOpsTfsOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['azure-devops-token'],
-      collectionUri: flags['collection-uri'],
-      teamProject: flags['team-project'],
-      repositoryId: flags['repository-id'],
+      serverUrl: flags['azure-devops-server-url'],
     };
-
-    const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
 
     const comments = new Compost(opts);
     await comments.postComment(
       'azure-devops-tfs',
+      project,
       targetType,
       targetRef,
       behavior,

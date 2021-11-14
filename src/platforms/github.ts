@@ -8,8 +8,6 @@ import { Logger } from '../util';
 export type GitHubOptions = CommentHandlerOptions & {
   token: string;
   apiUrl: string;
-  owner: string;
-  repo: string;
 };
 
 class GitHubComment implements Comment {
@@ -45,9 +43,19 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
 
   protected octokit: Octokit;
 
-  constructor(opts?: GitHubOptions) {
+  constructor(protected project: string, opts?: GitHubOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
+
+    const projectParts = project.split('/', 2);
+    if (projectParts.length !== 2) {
+      this.errorHandler(
+        `Invalid GitHub repository name: ${project}, expecting owner/repo`
+      );
+      return;
+    }
+
+    [this.owner, this.repo] = projectParts;
   }
 
   private processOpts(opts?: GitHubOptions): void {
@@ -60,20 +68,6 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
     this.apiUrl =
       opts?.apiUrl || process.env.GITHUB_API_URL || 'https://api.github.com';
 
-    this.owner = opts?.owner;
-    this.repo = opts?.repo;
-
-    if (!this.owner || !this.repo) {
-      if (process.env.GITHUB_REPOSITORY) {
-        const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/', 2);
-        this.owner = owner;
-        this.repo = repo;
-      } else {
-        this.errorHandler('GITHUB_REPOSITORY is required');
-        return;
-      }
-    }
-
     this.octokit = new Octokit({
       auth: this.token,
       apiUrl: this.apiUrl,
@@ -82,8 +76,8 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
 }
 
 export class GitHubPrHandler extends GitHubHandler {
-  constructor(private prNumber: number, opts?: GitHubOptions) {
-    super(opts as GitHubOptions);
+  constructor(project: string, private prNumber: number, opts?: GitHubOptions) {
+    super(project, opts as GitHubOptions);
   }
 
   static detect(logger: Logger): DetectResult | null {
@@ -93,8 +87,14 @@ export class GitHubPrHandler extends GitHubHandler {
       logger.debug('GITHUB_ACTIONS environment variable is not set to true');
       return null;
     }
-
     logger.debug('GITHUB_ACTIONS environment variable is set to true');
+
+    const project = process.env.GITHUB_REPOSITORY;
+    if (!project) {
+      logger.debug('GITHUB_REPOSITORY environment variable is not set');
+      return null;
+    }
+    logger.debug(`GITHUB_REPOSITORY environment variable is set to ${project}`);
 
     if (!process.env.GITHUB_PULL_REQUEST_NUMBER) {
       logger.debug(
@@ -102,7 +102,6 @@ export class GitHubPrHandler extends GitHubHandler {
       );
       return null;
     }
-
     logger.debug(
       `GITHUB_PULL_REQUEST_NUMBER environment variable is set to ${process.env.GITHUB_PULL_REQUEST_NUMBER}`
     );
@@ -118,6 +117,7 @@ export class GitHubPrHandler extends GitHubHandler {
 
     return {
       platform: 'github',
+      project,
       targetType: 'pr',
       targetRef: prNumber,
     };
@@ -247,8 +247,12 @@ export class GitHubPrHandler extends GitHubHandler {
 }
 
 export class GitHubCommitHandler extends GitHubHandler {
-  constructor(private commitSha: string, opts?: GitHubOptions) {
-    super(opts as GitHubOptions);
+  constructor(
+    project: string,
+    private commitSha: string,
+    opts?: GitHubOptions
+  ) {
+    super(project, opts as GitHubOptions);
   }
 
   static detect(logger: Logger): DetectResult | null {
@@ -258,20 +262,27 @@ export class GitHubCommitHandler extends GitHubHandler {
       logger.debug('GITHUB_ACTIONS environment variable is not set to true');
       return null;
     }
-
     logger.debug('GITHUB_ACTIONS environment variable is set to true');
+
+    const project = process.env.GITHUB_REPOSITORY;
+    if (!project) {
+      logger.debug('GITHUB_REPOSITORY environment variable is not set');
+      return null;
+    }
+
+    logger.debug(`GITHUB_REPOSITORY environment variable is set to ${project}`);
 
     if (!process.env.GITHUB_COMMIT_SHA) {
       logger.debug('GITHUB_COMMIT_SHA environment variable is not set');
       return null;
     }
-
     logger.debug(
       `GITHUB_COMMIT_SHA environment variable is set to ${process.env.GITHUB_COMMIT_SHA}`
     );
 
     return {
       platform: 'github',
+      project,
       targetType: 'commit',
       targetRef: process.env.GITHUB_COMMIT_SHA,
     };

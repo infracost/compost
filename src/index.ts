@@ -21,6 +21,7 @@ export type Behavior = 'update' | 'new' | 'hide_and_new' | 'delete_and_new';
 
 export type DetectResult = {
   platform: Platform;
+  project: string;
   targetType: TargetType;
   targetRef: TargetReference;
 };
@@ -33,6 +34,7 @@ export type Options =
 
 function commentHandlerFactory(
   platform: Platform,
+  project: string,
   targetType: TargetType,
   targetRef: TargetReference,
   opts?: Options
@@ -40,11 +42,20 @@ function commentHandlerFactory(
   if (targetType === 'pr' || targetType === 'mr') {
     switch (platform) {
       case 'github':
-        return new GitHubPrHandler(targetRef as number, opts as GitHubOptions);
+        return new GitHubPrHandler(
+          project,
+          targetRef as number,
+          opts as GitHubOptions
+        );
       case 'gitlab':
-        return new GitLabMrHandler(targetRef as number, opts as GitLabOptions);
+        return new GitLabMrHandler(
+          project,
+          targetRef as number,
+          opts as GitLabOptions
+        );
       case 'azure-devops-tfs':
         return new AzureDevOpsTfsPrHandler(
+          project,
           targetRef as number,
           opts as AzureDevOpsTfsOptions
         );
@@ -55,6 +66,7 @@ function commentHandlerFactory(
     switch (platform) {
       case 'github':
         return new GitHubCommitHandler(
+          project,
           targetRef as string,
           opts as GitHubOptions
         );
@@ -83,6 +95,7 @@ export default class Compost {
 
   private getCommentHandler(
     platform: Platform,
+    project: string,
     targetType: TargetType,
     targetRef: TargetReference
   ): CommentHandler | null {
@@ -90,6 +103,7 @@ export default class Compost {
     try {
       handler = commentHandlerFactory(
         platform,
+        project,
         targetType,
         targetRef,
         this.opts
@@ -126,12 +140,18 @@ export default class Compost {
 
   async postComment(
     platform: Platform,
+    project: string,
     targetType: TargetType,
     targetRef: TargetReference,
     behavior: Behavior,
     body: string
   ): Promise<void> {
-    const handler = this.getCommentHandler(platform, targetType, targetRef);
+    const handler = this.getCommentHandler(
+      platform,
+      project,
+      targetType,
+      targetRef
+    );
 
     if (handler === null) {
       this.errorHandler(

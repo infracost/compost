@@ -9,15 +9,9 @@ export default class GitHubCommand extends BaseCommand {
   static flags = {
     ...BaseCommand.flags,
     'github-token': flags.string({ description: 'GitHub token' }),
-    'api-url': flags.string({
+    'github-api-url': flags.string({
       description: 'GitHub API URL',
       default: 'https://api.github.com',
-    }),
-    owner: flags.string({
-      description: 'GitHub owner',
-    }),
-    repo: flags.string({
-      description: 'GitHub repo',
     }),
   };
 
@@ -28,17 +22,23 @@ export default class GitHubCommand extends BaseCommand {
 
     const body = this.loadBody(flags);
 
+    const { project, targetType, targetRef, behavior } =
+      this.loadBaseArgs(args);
+
     const opts: GitHubOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['github-token'],
-      apiUrl: flags['api-url'],
-      owner: flags.owner,
-      repo: flags.repo,
+      apiUrl: flags['github-api-url'],
     };
 
-    const { targetType, targetRef, behavior } = this.loadBaseArgs(args);
-
     const comments = new Compost(opts);
-    await comments.postComment('github', targetType, targetRef, behavior, body);
+    await comments.postComment(
+      'github',
+      project,
+      targetType,
+      targetRef,
+      behavior,
+      body
+    );
   }
 }

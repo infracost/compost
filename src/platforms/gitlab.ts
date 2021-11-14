@@ -7,7 +7,6 @@ import BaseCommentHandler from './base';
 export type GitLabOptions = CommentHandlerOptions & {
   token: string;
   serverUrl: string;
-  project: string;
 };
 
 class GitLabComment implements Comment {
@@ -37,9 +36,7 @@ abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
 
   protected serverUrl: string;
 
-  protected project: string;
-
-  constructor(opts?: GitLabOptions) {
+  constructor(protected project: string, opts?: GitLabOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
   }
@@ -53,17 +50,12 @@ abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
 
     this.serverUrl =
       opts?.serverUrl || process.env.CI_SERVER_URL || 'https://gitlab.com';
-
-    this.project = opts?.project || process.env.CI_PROJECT_PATH;
-    if (!this.project) {
-      this.errorHandler('CI_PROJECT_PATH is required');
-    }
   }
 }
 
 export class GitLabMrHandler extends GitLabHandler {
-  constructor(private mrNumber: number, opts?: GitLabOptions) {
-    super(opts as GitLabOptions);
+  constructor(project: string, private mrNumber: number, opts?: GitLabOptions) {
+    super(project, opts as GitLabOptions);
   }
 
   static detect(logger: Logger): DetectResult | null {
@@ -73,14 +65,19 @@ export class GitLabMrHandler extends GitLabHandler {
       logger.debug('GITLAB_CI environment variable is not set to true');
       return null;
     }
-
     logger.debug('GITLAB_CI environment variable is set to true');
+
+    const project = process.env.CI_PROJECT_PATH;
+    if (!project) {
+      logger.debug('CI_PROJECT_PATH environment variable is not set');
+      return null;
+    }
+    logger.debug(`CI_PROJECT_PATH environment variable is set to ${project}`);
 
     if (!process.env.CI_MERGE_REQUEST_IID) {
       logger.debug('CI_MERGE_REQUEST_IID environment variable is not set');
       return null;
     }
-
     logger.debug(
       `CI_MERGE_REQUEST_IID environment variable is set to ${process.env.CI_MERGE_REQUEST_IID}`
     );
@@ -96,6 +93,7 @@ export class GitLabMrHandler extends GitLabHandler {
 
     return {
       platform: 'gitlab',
+      project,
       targetType: 'mr',
       targetRef: mrNumber,
     };
