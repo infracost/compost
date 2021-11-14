@@ -80,7 +80,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
       }`
     );
 
-    await this.hidePrComments(matchingComments);
+    await this.hideComments(matchingComments);
 
     this.logger.info('Creating new comment');
     const comment = await this.callCreateComment(bodyWithTag);
@@ -100,14 +100,14 @@ export default abstract class BaseCommentHandler<C extends Comment>
       }`
     );
 
-    await this.deletePrComments(matchingComments);
+    await this.deleteComments(matchingComments);
 
     this.logger.info('Creating new comment');
     const comment = await this.callCreateComment(bodyWithTag);
     this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
   }
 
-  private async deletePrComments(comments: C[]): Promise<void> {
+  private async deleteComments(comments: C[]): Promise<void> {
     this.logger.info(
       `Deleting ${comments.length} comment${comments.length === 1 ? '' : 's'}`
     );
@@ -128,14 +128,25 @@ export default abstract class BaseCommentHandler<C extends Comment>
     await Promise.all(promises);
   }
 
-  private async hidePrComments(comments: C[]): Promise<void> {
-    this.logger.info(
-      `Hiding ${comments.length} comment${comments.length === 1 ? '' : 's'}`
-    );
-
+  private async hideComments(comments: C[]): Promise<void> {
     const promises: Promise<void>[] = [];
 
-    const visibleComments = comments.filter((comment) => !comment.isHidden);
+    const visibleComments = comments.filter((comment) => !comment.isHidden());
+
+    if (visibleComments.length !== comments.length) {
+      const hiddenCommentCount = comments.length - visibleComments.length;
+      this.logger.info(
+        `${hiddenCommentCount} comment${
+          hiddenCommentCount === 1 ? ' is' : 's are'
+        } already hidden`
+      );
+    }
+
+    this.logger.info(
+      `Hiding ${visibleComments.length} comment${
+        visibleComments.length === 1 ? '' : 's'
+      }`
+    );
 
     visibleComments.forEach((comment) => {
       promises.push(

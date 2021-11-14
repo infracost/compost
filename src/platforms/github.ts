@@ -188,7 +188,7 @@ export class GitHubPrHandler extends GitHubHandler {
       resp.data.id.toString(),
       resp.data.body,
       resp.data.created_at,
-      resp.data.url,
+      resp.data.html_url,
       false
     );
   }
@@ -290,7 +290,7 @@ export class GitHubCommitHandler extends GitHubHandler {
       resp.data.id.toString(),
       resp.data.body,
       resp.data.created_at,
-      resp.data.url,
+      resp.data.html_url,
       false
     );
   }
