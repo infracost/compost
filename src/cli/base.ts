@@ -58,8 +58,20 @@ export default abstract class BaseCommand extends Command {
   loadBody(flags: OutputFlags<typeof BaseCommand.flags>): string {
     let { body } = flags;
 
-    if (flags['body-file']) {
-      body = fs.readFileSync(flags['body-file'], 'utf8');
+    if (body) {
+      return body;
+    }
+
+    const bodyFile = flags['body-file'];
+
+    if (!fs.existsSync(bodyFile)) {
+      this.error(`body-file ${bodyFile} does not exist`);
+    }
+
+    try {
+      body = fs.readFileSync(bodyFile, 'utf8');
+    } catch (err) {
+      this.error(`Error reading body-file: ${err}`);
     }
 
     if (!body) {
