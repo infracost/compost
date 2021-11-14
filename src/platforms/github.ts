@@ -12,7 +12,8 @@ export type GitHubOptions = CommentHandlerOptions & {
 
 class GitHubComment implements Comment {
   constructor(
-    public id: string,
+    public globalId: string,
+    public id: number,
     public body: string,
     public createdAt: string,
     public url: string,
@@ -124,6 +125,7 @@ export class GitHubPrHandler extends GitHubHandler {
               comments(first: 100 after: $after) {
                 nodes {
                   id
+                  databaseId
                   url
                   createdAt
                   body
@@ -151,7 +153,14 @@ export class GitHubPrHandler extends GitHubHandler {
 
       const comments = (data.repository?.pullRequest?.comments.nodes || []).map(
         (c) =>
-          new GitHubComment(c.id, c.body, c.createdAt, c.url, c.isMinimized)
+          new GitHubComment(
+            c.id,
+            c.databaseId,
+            c.body,
+            c.createdAt,
+            c.url,
+            c.isMinimized
+          )
       );
       allComments.push(...comments);
     }
@@ -171,7 +180,8 @@ export class GitHubPrHandler extends GitHubHandler {
     });
 
     return new GitHubComment(
-      resp.data.id.toString(),
+      resp.data.node_id,
+      resp.data.id,
       resp.data.body,
       resp.data.created_at,
       resp.data.html_url,
@@ -189,7 +199,7 @@ export class GitHubPrHandler extends GitHubHandler {
       }`,
       {
         input: {
-          id: comment.id,
+          id: comment.globalId,
           body,
         },
       }
@@ -207,7 +217,7 @@ export class GitHubPrHandler extends GitHubHandler {
       `,
       {
         input: {
-          id: comment.id,
+          id: comment.globalId,
         },
       }
     );
@@ -224,7 +234,7 @@ export class GitHubPrHandler extends GitHubHandler {
       `,
       {
         input: {
-          subjectId: comment.id,
+          subjectId: comment.globalId,
           classifier: 'OUTDATED',
         },
       }
@@ -232,6 +242,7 @@ export class GitHubPrHandler extends GitHubHandler {
   }
 }
 
+// Commit comments aren't supported by the GraphQL API so this class uses the REST API
 export class GitHubCommitHandler extends GitHubHandler {
   constructor(
     project: string,
@@ -256,8 +267,32 @@ export class GitHubCommitHandler extends GitHubHandler {
     };
   }
 
+  async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
+    const comments = await this.octokit.paginate(
+      this.octokit.rest.repos.listCommentsForCommit,
+      {
+        owner: this.owner,
+        repo: this.repo,
+        commit_sha: this.commitSha,
+      }
+    );
+
+    const matchingComments = comments.filter((c) => c.body.includes(tag));
+
+    return matchingComments.map(
+      (c) =>
+        new GitHubComment(
+          c.node_id,
+          c.id,
+          c.body,
+          c.created_at,
+          c.html_url,
+          false
+        )
+    );
+  }
+
   async callCreateComment(body: string): Promise<GitHubComment> {
-    // Commit comments aren't supported by the GraphQL API
     const resp = await this.octokit.rest.repos.createCommitComment({
       owner: this.owner,
       repo: this.repo,
@@ -266,7 +301,8 @@ export class GitHubCommitHandler extends GitHubHandler {
     });
 
     return new GitHubComment(
-      resp.data.id.toString(),
+      resp.data.node_id,
+      resp.data.id,
       resp.data.body,
       resp.data.created_at,
       resp.data.html_url,
@@ -274,19 +310,38 @@ export class GitHubCommitHandler extends GitHubHandler {
     );
   }
 
-  callFindMatchingComments = this.unsupported(
-    'Finding matching comments on GitHub commits is not currently supported'
-  );
+  async callUpdateComment(comment: GitHubComment, body: string): Promise<void> {
+    await this.octokit.rest.repos.updateCommitComment({
+      owner: this.owner,
+      repo: this.repo,
+      comment_id: comment.id,
+      body,
+    });
+  }
 
-  callUpdateComment = this.unsupported(
-    'Updating comments on GitHub commits is not currently supported'
-  );
+  async callDeleteComment(comment: GitHubComment): Promise<void> {
+    await this.octokit.rest.repos.deleteCommitComment({
+      owner: this.owner,
+      repo: this.repo,
+      comment_id: comment.id,
+    });
+  }
 
-  callDeleteComment = this.unsupported(
-    'Deleting comments on GitHub commits is not currently supported'
-  );
-
-  callHideComment = this.unsupported(
-    'Hiding comments on GitHub commits is not currently supported'
-  );
+  async callHideComment(comment: GitHubComment): Promise<void> {
+    await this.octokit.graphql(
+      `
+      mutation($input: MinimizeCommentInput!) { 
+        minimizeComment(input: $input) {
+          clientMutationId
+        }
+      }
+      `,
+      {
+        input: {
+          subjectId: comment.globalId,
+          classifier: 'OUTDATED',
+        },
+      }
+    );
+  }
 }

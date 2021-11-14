@@ -11,6 +11,7 @@ It currently detects the following CI environments:
 * Azure DevOps (GitHub)
 
 Coming soon:
+* GitLab CI (commits)
 * BitBucket
 * Circle CI (GitHub)
 * CircleCI (BitBucket)
