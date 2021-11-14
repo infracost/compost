@@ -7,7 +7,7 @@ import { CommentHandlerOptions } from '../platforms';
 
 export default abstract class BaseCommand extends Command {
   static flags = {
-    help: flags.help({ char: 'h' }),
+    help: flags.help({ char: 'h', description: 'Show help' }),
 
     body: flags.string({
       description: 'Body of comment to post, mutually exclusive with body-file',

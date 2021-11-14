@@ -6,6 +6,17 @@ import BaseCommand from '../base';
 export default class GitHubCommand extends BaseCommand {
   static description = 'Post a comment to a GitHub pull request/commit';
 
+  static examples = [
+    `• Update a comment on a pull request:
+
+   $ compost github infracost/compost-example pr 3 update --body="my comment"
+`,
+
+    `• Update a comment on a commit:
+    
+   $ compost github infracost/compost-example commit 2ca7182 update --body="my comment",`,
+  ];
+
   static flags = {
     ...BaseCommand.flags,
     'github-token': flags.string({ description: 'GitHub token' }),

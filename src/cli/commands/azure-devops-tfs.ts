@@ -8,6 +8,12 @@ export default class AzureDevOpsTfsCommand extends BaseCommand {
   static description =
     'Post a comment to a Azure DevOps (TFS) pull request/commit';
 
+  static examples = [
+    `• Update a comment on a pull request:
+  
+   $ compost azure-devops-tfs infracost/base/compost-example pr 3 update --body="my comment"`,
+  ];
+
   static flags = {
     ...BaseCommand.flags,
     'azure-devops-token': flags.string({

@@ -7,6 +7,12 @@ import BaseCommand from '../base';
 export default class GitLabCommand extends BaseCommand {
   static description = 'Post a comment to a GitLab merge request/commit';
 
+  static examples = [
+    `• Update a comment on a merge request:
+
+   $ compost gitlab infracost/compost-example mr 3 update --body="my comment"`,
+  ];
+
   static flags = {
     ...BaseCommand.flags,
     'gitlab-token': flags.string({ description: 'GitLab token' }),

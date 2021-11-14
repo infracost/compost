@@ -16,10 +16,7 @@
   ],
   "oclif": {
     "commands": "./dist/cli/commands",
-    "bin": "compost",
-    "plugins": [
-      "@oclif/plugin-help"
-    ]
+    "bin": "compost"
   },
   "dependencies": {
     "@oclif/command": "^1.8.0",

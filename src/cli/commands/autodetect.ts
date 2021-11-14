@@ -6,6 +6,26 @@ export default class AutoDetect extends BaseCommand {
   static description =
     'Auto-detect the platform and post a comment to a {pull|merge} request/commit';
 
+  static examples = [
+    `• Update the previously posted comment, or create if it doesn't exist:
+
+   $ compost autodetect update --body="my comment"
+`,
+
+    `• Post a new comment:
+
+   $ compost autodetect new --body="my new comment"
+`,
+    `• Delete the previous posted comments and post a new comment:
+
+   $ compost autodetect delete_and_new --body="my new comment"
+`,
+
+    `• Hide the previous posted comments and post a new comment (GitHub only):
+
+   $ compost autodetect hide_and_new --body="my new comment"`,
+  ];
+
   static flags = {
     ...BaseCommand.flags,
     'target-type': flags.string({

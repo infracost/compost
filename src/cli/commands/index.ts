@@ -3,8 +3,8 @@ import { getHelpClass } from '@oclif/plugin-help';
 
 export default class IndexCommand extends Command {
   static flags = {
-    version: flags.version({ char: 'v' }),
-    help: flags.help({ char: 'h' }),
+    version: flags.version({ char: 'v', description: 'Show version' }),
+    help: flags.help({ char: 'h', description: 'Show help' }),
   };
 
   async run() {
