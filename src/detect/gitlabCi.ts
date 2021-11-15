@@ -1,8 +1,7 @@
-/* eslint-disable import/prefer-default-export */
-
 import { TargetReference, TargetType } from '../types';
 import { GitLabDetectResult } from '../platforms/gitlab';
-import { BaseDetector, DetectError } from './base';
+import { BaseDetector } from './base';
+import { DetectError } from '.';
 
 export class GitLabCiDetector extends BaseDetector {
   detect(): GitLabDetectResult {

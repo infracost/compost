@@ -1,8 +1,7 @@
-/* eslint-disable import/prefer-default-export */
-
 import { TargetReference, TargetType } from '../types';
 import { GitHubDetectResult } from '../platforms/github';
-import { BaseDetector, DetectError } from './base';
+import { BaseDetector } from './base';
+import { DetectError } from '.';
 
 export class GitHubActionsDetector extends BaseDetector {
   detect(): GitHubDetectResult {

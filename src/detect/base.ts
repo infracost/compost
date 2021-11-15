@@ -1,13 +1,6 @@
+import { DetectError } from '.';
 import { DetectorOptions, DetectResult, TargetType } from '../types';
 import { Logger, NullLogger } from '../util';
-
-export class DetectError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
 
 export abstract class BaseDetector {
   protected targetTypes?: TargetType[];

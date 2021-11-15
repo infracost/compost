@@ -1,4 +1,4 @@
-import { DetectError } from './detect/base';
+import { DetectError } from './detect';
 import { commentHandlerRegistry, detectorRegistry } from './registry';
 import {
   TargetType,

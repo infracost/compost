@@ -1,9 +1,8 @@
-/* eslint-disable import/prefer-default-export */
-
 import { TargetReference, TargetType } from '../types';
 import { AzureDevOpsDetectResult } from '../platforms/azureDevOps';
 import { GitHubDetectResult } from '../platforms/github';
-import { BaseDetector, DetectError } from './base';
+import { BaseDetector } from './base';
+import { DetectError } from '.';
 
 export class AzureDevOpsPipelinesDetector extends BaseDetector {
   detect(): AzureDevOpsDetectResult | GitHubDetectResult {
