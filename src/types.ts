@@ -10,7 +10,7 @@ export type TargetReference = string | number;
 export type Behavior = 'update' | 'new' | 'hide_and_new' | 'delete_and_new';
 
 export type CommentHandlerOptions = {
-  tag: string;
+  tag?: string;
   logger?: Logger;
   errorHandler?: ErrorHandler;
 };

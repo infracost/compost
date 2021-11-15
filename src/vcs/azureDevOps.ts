@@ -8,7 +8,10 @@ const patTokenLength = 52;
 
 export type AzureDevOpsOptions = CommentHandlerOptions & {
   token: string;
-  serverUrl: string;
+};
+
+type AzureDevOpsDetectResult = DetectResult & {
+  opts: AzureDevOpsOptions;
 };
 
 class AzureDevOpsComment implements Comment {
@@ -36,50 +39,45 @@ class AzureDevOpsComment implements Comment {
 abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment> {
   protected token: string;
 
-  protected serverUrl: string;
+  protected repoUrl: string;
 
-  protected org: string;
-
-  protected teamProject: string;
-
-  protected repo: string;
+  protected repoApiUrl: string;
 
   constructor(protected project: string, opts?: AzureDevOpsOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
 
-    const projectParts = project.split('/', 3);
-    if (projectParts.length !== 3) {
-      this.errorHandler(
-        `Invalid Azure DevOps repository name: ${project}, expecting org/teamProject/repo`
-      );
-      return;
+    try {
+      this.repoApiUrl = AzureDevOpsHandler.parseRepoApiUrl(project);
+    } catch (err) {
+      this.errorHandler(err.message);
     }
-
-    [this.org, this.teamProject, this.repo] = projectParts;
   }
 
   processOpts(opts?: AzureDevOpsOptions): void {
-    this.token = opts?.token || process.env.SYSTEM_ACCESSTOKEN;
+    this.token = opts?.token || process.env.AZURE_DEVOPS_EXT_PAT;
     if (!this.token) {
-      this.errorHandler('SYSTEM_ACCESSTOKEN is required');
-      return;
+      this.errorHandler(
+        '--azure-devops-token or AZURE_DEVOPS_EXT_PAT environment variable is required'
+      );
+    }
+  }
+
+  // Convert the Azure DevOps repo URL to an API URL
+  static parseRepoApiUrl(repoUrl: string): string {
+    const parts = repoUrl.split('_git/');
+    if (parts.length !== 2) {
+      throw new Error(
+        `Invalid repo URL format ${repoUrl}. Expected https://dev.azure.com/org/project/_git/repo/.`
+      );
     }
 
-    this.serverUrl = opts.serverUrl;
-
-    if (!this.serverUrl) {
-      let collectionUri = process.env.SYSTEM_COLLECTIONURI;
-      if (collectionUri) {
-        collectionUri = collectionUri.replace(/\/+$/, '');
-        this.serverUrl = collectionUri.substring(
-          0,
-          collectionUri.lastIndexOf('/') + 1
-        );
-      }
+    let url = `${parts[0]}_apis/git/repositories/${parts[1]}`;
+    if (!url.endsWith('/')) {
+      url += '/';
     }
 
-    this.serverUrl = opts.serverUrl || 'https://dev.azure.com';
+    return url;
   }
 
   protected authHeaders() {
@@ -105,27 +103,19 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
     super(project, opts as AzureDevOpsOptions);
   }
 
-  static detect(logger: Logger): DetectResult | null {
+  static detect(logger: Logger): AzureDevOpsDetectResult | null {
     logger.debug('Checking for Azure DevOps pull request');
 
-    const collectionUri = checkEnvVarExists('SYSTEM_COLLECTIONURI', logger);
-    if (!collectionUri) {
+    const token = checkEnvVarExists(process.env.SYSTEM_ACCESSTOKEN, logger);
+    if (!token) {
       return null;
     }
-
-    // The collection URI is in the format https://dev.azure.com/org/
-    const org = collectionUri.replace(/\/+$/, '').split('/').at(-1);
 
     if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger)) {
       return null;
     }
 
-    const teamProject = checkEnvVarExists('SYSTEM_TEAMPROJECT', logger);
-    if (!teamProject) {
-      return null;
-    }
-
-    const repo = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
+    const repo = checkEnvVarExists('BUILD_REPOSITORY_URI', logger);
     if (!repo) {
       return null;
     }
@@ -148,9 +138,12 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
 
     return {
       vcs: 'azure-devops',
-      project: `${org}/${teamProject}/${repo}`,
+      project: repo,
       targetType: 'pr',
       targetRef: prNumber,
+      opts: {
+        token: process.env.AZURE_DEVOPS_EXT_PAT,
+      },
     };
   }
 
@@ -170,7 +163,7 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
         }[];
       }[];
     }>(
-      `${this.serverUrl}/${this.org}/${this.teamProject}/_apis/git/repositories/${this.repo}/pullRequests/${this.prNumber}/threads?api-version=6.0`,
+      `${this.repoApiUrl}pullRequests/${this.prNumber}/threads?api-version=6.0`,
       {
         headers: this.authHeaders(),
       }
@@ -218,7 +211,7 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
         };
       }[];
     }>(
-      `${this.serverUrl}/${this.org}/${this.teamProject}/_apis/git/repositories/${this.repo}/pullRequests/${this.prNumber}/threads?api-version=6.0`,
+      `${this.repoApiUrl}pullRequests/${this.prNumber}/threads?api-version=6.0`,
       {
         comments: [
           {

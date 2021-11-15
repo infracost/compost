@@ -10,17 +10,13 @@ export default class AzureDevOpsCommand extends BaseCommand {
   static examples = [
     `• Update a comment on a pull request:
   
-   $ compost azure-devops infracost/base/compost-example pr 3 update --body="my comment"`,
+   $ compost azure-devops https://dev.azure.com/infracost/base/_git/compost-example pr 3 update --body="my comment"`,
   ];
 
   static flags = {
     ...BaseCommand.flags,
     'azure-devops-token': flags.string({
       description: 'Azure DevOps PAT token or a base64 encoded bearer token',
-    }),
-    'azure-devops-server-url': flags.string({
-      description: 'Azure DevOps server URL',
-      default: 'https://dev.azure.com',
     }),
   };
 
@@ -29,7 +25,8 @@ export default class AzureDevOpsCommand extends BaseCommand {
     return [
       {
         ...args[0],
-        description: 'Project name in format org/teamProject/repo',
+        description:
+          'Repo URL, e.g. https://dev.azure.com/infracost/base/_git/compost-example',
       },
       ...args.slice(1),
     ];
@@ -48,7 +45,6 @@ export default class AzureDevOpsCommand extends BaseCommand {
     const opts: AzureDevOpsOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['azure-devops-token'],
-      serverUrl: flags['azure-devops-server-url'],
     };
 
     const comments = new Compost(opts);

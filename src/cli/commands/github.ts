@@ -18,10 +18,12 @@ export default class GitHubCommand extends BaseCommand {
 
   static flags = {
     ...BaseCommand.flags,
-    'github-token': flags.string({ description: 'GitHub token' }),
+    'github-token': flags.string({
+      description: 'GitHub token, defaults to $GITHUB_TOKEN',
+    }),
     'github-api-url': flags.string({
-      description: 'GitHub API URL',
-      default: 'https://api.github.com',
+      description: 'GitHub API URL, defaults to $GITHUB_API_URL',
+      default: process.env.GITHUB_API_URL || 'https://api.github.com',
     }),
   };
 

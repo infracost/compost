@@ -44,7 +44,7 @@ abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
   processOpts(opts?: GitLabOptions): void {
     this.token = opts?.token || process.env.GITLAB_TOKEN;
     if (!this.token) {
-      this.errorHandler('GITLAB_TOKEN is required');
+      this.errorHandler('--gitlab-token or GITLAB_TOKEN is required');
       return;
     }
 

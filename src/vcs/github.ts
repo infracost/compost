@@ -66,7 +66,7 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
   private processOpts(opts?: GitHubOptions): void {
     this.token = opts?.token || process.env.GITHUB_TOKEN;
     if (!this.token) {
-      this.errorHandler('GITHUB_TOKEN is required');
+      this.errorHandler('--github-token or GITHUB_TOKEN is required');
       return;
     }
 
