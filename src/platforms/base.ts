@@ -176,13 +176,6 @@ export default abstract class BaseCommentHandler<C extends Comment>
   abstract callHideComment(comment: C): Promise<void>;
 
   abstract callDeleteComment(comment: C): Promise<void>;
-
-  unsupported(message: string): () => never {
-    return () => {
-      this.errorHandler(message);
-      throw new Error(message);
-    };
-  }
 }
 
 export function markdownTag(s: string) {

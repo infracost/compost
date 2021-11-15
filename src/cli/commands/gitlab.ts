@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
 import Compost from '../..';
-import { GitLabOptions } from '../../vcs/gitlab';
+import { GitLabOptions } from '../../platforms/gitlab';
 import BaseCommand from '../base';
 
 export default class GitLabCommand extends BaseCommand {
@@ -29,9 +29,6 @@ export default class GitLabCommand extends BaseCommand {
       {
         ...args[1],
         options: ['mr', 'commit'],
-        parse(input: string) {
-          return input === 'pr' ? 'mr' : input;
-        },
         description: 'Whether to post on a merge request or commit',
       },
       {

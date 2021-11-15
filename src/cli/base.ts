@@ -9,14 +9,6 @@ import {
   Behavior,
 } from '../types';
 
-export class DetectError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
-
 export default abstract class BaseCommand extends Command {
   static flags = {
     help: flags.help({ char: 'h', description: 'Show help' }),
@@ -47,9 +39,6 @@ export default abstract class BaseCommand extends Command {
       description: 'Whether to post on a pull request or commit',
       required: true,
       options: ['pr', 'commit'],
-      parse(input: string) {
-        return input === 'mr' ? 'pr' : input;
-      },
     },
     {
       name: 'target_ref',
@@ -133,35 +122,5 @@ export default abstract class BaseCommand extends Command {
       targetRef,
       behavior,
     };
-  }
-}
-
-// Checks and logs if the env variable exists and returns the value if it does
-export function checkEnvVarExists(
-  name: string,
-  logger?: Logger
-): string | never {
-  const value = process.env[name];
-  if (value === undefined) {
-    throw new DetectError(`${name} environment variable is not set`);
-  }
-
-  logger.debug(`${name} is set to ${value}`);
-
-  return value;
-}
-
-// Checks and logs if the env variable equals the expected value
-export function checkEnvVarValue(
-  name: string,
-  expectedValue: string,
-  logger?: Logger
-): void | never {
-  const value = checkEnvVarExists(name, logger);
-
-  if (value !== expectedValue) {
-    throw new DetectError(
-      `${name} environment variable is set to ${value}, not ${expectedValue}`
-    );
   }
 }

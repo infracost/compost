@@ -1,6 +1,6 @@
 import { flags } from '@oclif/parser';
 import Compost from '../..';
-import { Behavior, VCS } from '../../types';
+import { Behavior, Platform, TargetType } from '../../types';
 import BaseCommand from '../base';
 
 export default class AutoDetect extends BaseCommand {
@@ -46,15 +46,17 @@ export default class AutoDetect extends BaseCommand {
 
     const comments = new Compost(opts);
 
-    const detectResult = comments.detectEnvironment(flags['target-type']);
+    const detectResult = comments.detectEnvironment(
+      flags['target-type'] as TargetType[]
+    );
     if (!detectResult) {
       this.error('Unable to detect current environment');
     }
 
-    const { vcs, project, targetType, targetRef } = detectResult;
+    const { platform, project, targetType, targetRef } = detectResult;
 
     await comments.postComment(
-      vcs as VCS,
+      platform as Platform,
       project,
       targetType,
       targetRef,

@@ -1,11 +1,12 @@
-import registry from './vcs/registry';
+import { DetectError } from './detect/base';
+import { commentHandlerRegistry, detectorRegistry } from './registry';
 import {
   TargetType,
   TargetReference,
   Behavior,
   CommentHandler,
   DetectResult,
-  VCS,
+  Platform,
   CommentHandlerOptions,
 } from './types';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from './util';
@@ -23,19 +24,19 @@ export default class Compost {
     this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
   }
 
-  // Find the comment handler for the given VCS and target type and construct it
+  // Find the comment handler for the given platform and target type and construct it
   private commentHandlerFactory(
-    vcs: VCS,
+    platform: Platform,
     project: string,
     targetType: TargetType,
     targetRef: TargetReference
   ): CommentHandler | null {
-    for (const config of registry) {
+    for (const config of commentHandlerRegistry) {
       if (
-        config.vcs === vcs &&
+        config.platform === platform &&
         config.supportedTargetTypes.includes(targetType)
       ) {
-        return config.handlerFactory(project, targetRef, this.opts);
+        return config.factory(project, targetRef, this.opts);
       }
     }
 
@@ -44,21 +45,31 @@ export default class Compost {
 
   // Detect the current environment
   // Checks all the detect functions and finds the first one that returns a result
-  detectEnvironment(targetTypes?: string[]): DetectResult | null {
-    for (const config of registry) {
-      if (
-        targetTypes !== undefined &&
-        !config.supportedTargetTypes.some((t) => targetTypes.includes(t))
-      ) {
-        this.logger.debug(
-          `Skipping checking ${config.displayName} since it does not support any of the target types ${targetTypes}`
-        );
-        continue;
+  detectEnvironment(targetTypes?: TargetType[]): DetectResult | null {
+    for (const config of detectorRegistry) {
+      const detector = config.factory({
+        targetTypes,
+        logger: this.logger,
+      });
+
+      let result: DetectResult;
+
+      try {
+        result = detector.detect();
+      } catch (err) {
+        if (err.name === DetectError.name) {
+          this.logger.debug(err.message);
+          continue;
+        }
+        this.errorHandler(err);
       }
 
-      const result = config.detectFunc(this.logger);
       if (result) {
-        this.logger.info(`Detected ${config.displayName}`);
+        this.logger.info(`Detected ${config.displayName}
+    Platform: ${result.platform}
+    Project: ${result.project}
+    Target type: ${result.targetType}
+    Target ref: ${result.targetRef}\n`);
         return result;
       }
     }
@@ -68,7 +79,7 @@ export default class Compost {
 
   // Post a comment to the pull/merge request or commit
   async postComment(
-    vcs: VCS,
+    platform: Platform,
     project: string,
     targetType: TargetType,
     targetRef: TargetReference,
@@ -76,7 +87,7 @@ export default class Compost {
     body: string
   ): Promise<void> {
     const handler = this.commentHandlerFactory(
-      vcs,
+      platform,
       project,
       targetType,
       targetRef
@@ -84,7 +95,7 @@ export default class Compost {
 
     if (handler === null) {
       this.errorHandler(
-        `Unable to find comment handler for vcs ${vcs}, target type ${targetType}`
+        `Unable to find comment handler for platform ${platform}, target type ${targetType}`
       );
     }
 

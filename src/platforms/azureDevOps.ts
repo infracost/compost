@@ -1,8 +1,6 @@
 import axios from 'axios';
 import BaseCommentHandler, { Comment } from './base';
-import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
-import { checkEnvVarExists, checkEnvVarValue, DetectError } from '../cli/base';
 
 const patTokenLength = 52;
 
@@ -101,44 +99,6 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
     opts?: AzureDevOpsOptions
   ) {
     super(project, opts as AzureDevOpsOptions);
-  }
-
-  static detect(logger: Logger): AzureDevOpsDetectResult | null {
-    logger.debug('Checking for Azure DevOps pull request');
-
-    try {
-      checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger);
-      const token = checkEnvVarExists(process.env.SYSTEM_ACCESSTOKEN, logger);
-      const repo = checkEnvVarExists('BUILD_REPOSITORY_URI', logger);
-      const prNumberVal = checkEnvVarExists(
-        'SYSTEM_PULLREQUEST_PULLREQUESTID',
-        logger
-      );
-
-      const prNumber = Number.parseInt(prNumberVal, 10);
-      if (Number.isNaN(prNumber)) {
-        throw new DetectError(
-          `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not a valid number`
-        );
-      }
-
-      return {
-        vcs: 'azure-devops',
-        project: repo,
-        targetType: 'pr',
-        targetRef: prNumber,
-        opts: {
-          token,
-        },
-      };
-    } catch (err) {
-      if (err.name !== DetectError.name) {
-        throw err;
-      }
-
-      logger.debug(err);
-      return null;
-    }
   }
 
   async callFindMatchingComments(tag: string): Promise<AzureDevOpsComment[]> {
@@ -260,7 +220,13 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
     });
   }
 
-  callHideComment = this.unsupported(
-    'Hiding comments is not supported by Azure DevOps'
-  );
+  async hideAndNewComment(body: string): Promise<void> {
+    this.logger.warn('Hiding comments is not supported by GitLab');
+    await this.newComment(body);
+  }
+
+  async callHideComment() {
+    // Shouldn't get here
+    this.errorHandler('Not implemented');
+  }
 }

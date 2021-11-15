@@ -1,8 +1,6 @@
 import axios from 'axios';
 import BaseCommentHandler, { Comment } from './base';
-import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
-import { checkEnvVarExists, checkEnvVarValue, DetectError } from '../cli/base';
 
 export type GitLabOptions = CommentHandlerOptions & {
   token: string;
@@ -60,44 +58,6 @@ abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
 export class GitLabMrHandler extends GitLabHandler {
   constructor(project: string, private mrNumber: number, opts?: GitLabOptions) {
     super(project, opts as GitLabOptions);
-  }
-
-  static detect(logger: Logger): GitLabDetectResult | null {
-    logger.debug('Checking for GitLab CI merge request');
-
-    try {
-      checkEnvVarValue('GITLAB_CI', 'true', logger);
-      const token = checkEnvVarExists('GITLAB_TOKEN', logger);
-      const serverUrl = checkEnvVarExists('CI_SERVER_URL', logger);
-      const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
-      const mrNumberVal = checkEnvVarExists('CI_MERGE_REQUEST_IID', logger);
-
-      const mrNumber = Number.parseInt(mrNumberVal, 10);
-      if (Number.isNaN(mrNumber)) {
-        logger.debug(
-          `CI_MERGE_REQUEST_IID environment variable is not a valid number`
-        );
-        return null;
-      }
-
-      return {
-        vcs: 'gitlab',
-        project,
-        targetType: 'mr',
-        targetRef: mrNumber,
-        opts: {
-          token,
-          serverUrl,
-        },
-      };
-    } catch (err) {
-      if (err.name !== DetectError.name) {
-        throw err;
-      }
-
-      logger.debug(err);
-      return null;
-    }
   }
 
   async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {
@@ -265,7 +225,14 @@ export class GitLabMrHandler extends GitLabHandler {
     }
   }
 
-  callHideComment = this.unsupported(
-    'Hiding comments is not supported by GitLab'
-  );
+  async hideAndNewComment(body: string): Promise<void> {
+    this.logger.warn('Hiding comments is not supported by GitLab');
+    await this.newComment(body);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async callHideComment() {
+    // Shouldn't get here
+    this.errorHandler('Not implemented');
+  }
 }

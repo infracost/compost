@@ -1,6 +1,6 @@
 import { flags } from '@oclif/command';
 import Compost from '../..';
-import { GitHubOptions } from '../../vcs/github';
+import { GitHubOptions } from '../../platforms/github';
 import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
