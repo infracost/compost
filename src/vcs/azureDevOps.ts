@@ -6,12 +6,12 @@ import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
 
 const patTokenLength = 52;
 
-export type AzureDevOpsTfsOptions = CommentHandlerOptions & {
+export type AzureDevOpsOptions = CommentHandlerOptions & {
   token: string;
   serverUrl: string;
 };
 
-class AzureDevOpsTfsComment implements Comment {
+class AzureDevOpsComment implements Comment {
   constructor(
     public selfHref: string,
     public body: string,
@@ -33,7 +33,7 @@ class AzureDevOpsTfsComment implements Comment {
   }
 }
 
-abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsComment> {
+abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment> {
   protected token: string;
 
   protected serverUrl: string;
@@ -44,14 +44,14 @@ abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsCo
 
   protected repo: string;
 
-  constructor(protected project: string, opts?: AzureDevOpsTfsOptions) {
+  constructor(protected project: string, opts?: AzureDevOpsOptions) {
     super(opts as CommentHandlerOptions);
     this.processOpts(opts);
 
     const projectParts = project.split('/', 3);
     if (projectParts.length !== 3) {
       this.errorHandler(
-        `Invalid Azure DevOps (TFS) repository name: ${project}, expecting org/teamProject/repo`
+        `Invalid Azure DevOps repository name: ${project}, expecting org/teamProject/repo`
       );
       return;
     }
@@ -59,7 +59,7 @@ abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsCo
     [this.org, this.teamProject, this.repo] = projectParts;
   }
 
-  processOpts(opts?: AzureDevOpsTfsOptions): void {
+  processOpts(opts?: AzureDevOpsOptions): void {
     this.token = opts?.token || process.env.SYSTEM_ACCESSTOKEN;
     if (!this.token) {
       this.errorHandler('SYSTEM_ACCESSTOKEN is required');
@@ -79,7 +79,7 @@ abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsCo
       }
     }
 
-    this.serverUrl = this.serverUrl || 'https://dev.azure.com';
+    this.serverUrl = opts.serverUrl || 'https://dev.azure.com';
   }
 
   protected authHeaders() {
@@ -96,17 +96,17 @@ abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsCo
   }
 }
 
-export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
+export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
   constructor(
     project: string,
     private prNumber: number,
-    opts?: AzureDevOpsTfsOptions
+    opts?: AzureDevOpsOptions
   ) {
-    super(project, opts as AzureDevOpsTfsOptions);
+    super(project, opts as AzureDevOpsOptions);
   }
 
   static detect(logger: Logger): DetectResult | null {
-    logger.debug('Checking for Azure DevOps (TFS) pull request');
+    logger.debug('Checking for Azure DevOps pull request');
 
     const collectionUri = checkEnvVarExists('SYSTEM_COLLECTIONURI', logger);
     if (!collectionUri) {
@@ -147,16 +147,14 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
     }
 
     return {
-      vcs: 'azure-devops-tfs',
+      vcs: 'azure-devops',
       project: `${org}/${teamProject}/${repo}`,
       targetType: 'pr',
       targetRef: prNumber,
     };
   }
 
-  async callFindMatchingComments(
-    tag: string
-  ): Promise<AzureDevOpsTfsComment[]> {
+  async callFindMatchingComments(tag: string): Promise<AzureDevOpsComment[]> {
     const resp = await axios.get<{
       value: {
         isDeleted: boolean;
@@ -180,7 +178,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
 
     // This plugin only creates comments at the top-level of threads,
     // so we can always just pull the first comment in the thread
-    const topLevelComments: AzureDevOpsTfsComment[] = [];
+    const topLevelComments: AzureDevOpsComment[] = [];
 
     for (const thread of resp.data.value) {
       if (thread.isDeleted) {
@@ -191,7 +189,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
           continue;
         }
         topLevelComments.push(
-          new AzureDevOpsTfsComment(
+          new AzureDevOpsComment(
             comment._links.self.href, // eslint-disable-line no-underscore-dangle
             comment.content,
             comment.publishedDate
@@ -208,7 +206,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
     return matchingComments;
   }
 
-  async callCreateComment(body: string): Promise<AzureDevOpsTfsComment> {
+  async callCreateComment(body: string): Promise<AzureDevOpsComment> {
     const resp = await axios.post<{
       comments: {
         content: string;
@@ -245,7 +243,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
 
     const firstComment = resp.data.comments[0];
 
-    return new AzureDevOpsTfsComment(
+    return new AzureDevOpsComment(
       firstComment._links.self.href, // eslint-disable-line no-underscore-dangle
       firstComment.content,
       firstComment.publishedDate
@@ -253,7 +251,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
   }
 
   async callUpdateComment(
-    comment: AzureDevOpsTfsComment,
+    comment: AzureDevOpsComment,
     body: string
   ): Promise<void> {
     await axios.patch(
@@ -269,13 +267,13 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
     );
   }
 
-  async callDeleteComment(comment: AzureDevOpsTfsComment): Promise<void> {
+  async callDeleteComment(comment: AzureDevOpsComment): Promise<void> {
     await axios.delete(`${comment.selfHref}?api-version=6.0`, {
       headers: this.authHeaders(),
     });
   }
 
   callHideComment = this.unsupported(
-    'Hiding comments is not supported by Azure DevOps (TFS)'
+    'Hiding comments is not supported by Azure DevOps'
   );
 }

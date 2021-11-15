@@ -7,7 +7,7 @@ Compost (WIP name) is for tools that run in CI pipelines and want to post result
 It currently detects the following CI environments:
 * GitHub Actions
 * GitLab CI (merge requests only)
-* Azure DevOps (TFS)
+* Azure DevOps
 * Azure DevOps (GitHub)
 
 Coming soon:

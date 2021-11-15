@@ -1,10 +1,6 @@
 import { ErrorHandler, Logger } from './util';
 
-export type VCS =
-  | 'github'
-  | 'gitlab'
-  | 'azure-devops-tfs'
-  | 'azure-devops-github';
+export type VCS = 'github' | 'gitlab' | 'azure-devops' | 'azure-devops-github';
 
 export type TargetType = 'pr' | 'mr' | 'commit';
 

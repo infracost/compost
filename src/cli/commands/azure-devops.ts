@@ -1,17 +1,16 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
 import Compost from '../..';
-import { AzureDevOpsTfsOptions } from '../../vcs/azureDevOpsTfs';
+import { AzureDevOpsOptions } from '../../vcs/azureDevOps';
 import BaseCommand from '../base';
 
-export default class AzureDevOpsTfsCommand extends BaseCommand {
-  static description =
-    'Post a comment to a Azure DevOps (TFS) pull request/commit';
+export default class AzureDevOpsCommand extends BaseCommand {
+  static description = 'Post a comment to a Azure DevOps pull request/commit';
 
   static examples = [
     `• Update a comment on a pull request:
   
-   $ compost azure-devops-tfs infracost/base/compost-example pr 3 update --body="my comment"`,
+   $ compost azure-devops infracost/base/compost-example pr 3 update --body="my comment"`,
   ];
 
   static flags = {
@@ -36,17 +35,17 @@ export default class AzureDevOpsTfsCommand extends BaseCommand {
     ];
   }
 
-  static args = AzureDevOpsTfsCommand.fixupBaseArgs(BaseCommand.args);
+  static args = AzureDevOpsCommand.fixupBaseArgs(BaseCommand.args);
 
   async run() {
-    const { args, flags } = this.parse(AzureDevOpsTfsCommand);
+    const { args, flags } = this.parse(AzureDevOpsCommand);
 
     const body = this.loadBody(flags);
 
     const { project, targetType, targetRef, behavior } =
       this.loadBaseArgs(args);
 
-    const opts: AzureDevOpsTfsOptions = {
+    const opts: AzureDevOpsOptions = {
       ...this.loadBaseOptions(flags),
       token: flags['azure-devops-token'],
       serverUrl: flags['azure-devops-server-url'],
@@ -54,7 +53,7 @@ export default class AzureDevOpsTfsCommand extends BaseCommand {
 
     const comments = new Compost(opts);
     await comments.postComment(
-      'azure-devops-tfs',
+      'azure-devops',
       project,
       targetType,
       targetRef,

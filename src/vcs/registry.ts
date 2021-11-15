@@ -10,10 +10,7 @@ import {
   AzureDevOpsGitHubPrHandler,
   AzureDevOpsGitHubCommitHandler,
 } from './azureDevOpsGitHub';
-import {
-  AzureDevOpsTfsOptions,
-  AzureDevOpsTfsPrHandler,
-} from './azureDevOpsTfs';
+import { AzureDevOpsOptions, AzureDevOpsPrHandler } from './azureDevOps';
 import { GitHubOptions, GitHubPrHandler, GitHubCommitHandler } from './github';
 import { GitLabOptions, GitLabMrHandler } from './gitlab';
 
@@ -61,15 +58,15 @@ const registry: Registry = [
     detectFunc: GitLabMrHandler.detect,
   },
   {
-    displayName: 'Azure DevOps (TFS) pull request',
-    vcs: 'azure-devops-tfs',
+    displayName: 'Azure DevOps pull request',
+    vcs: 'azure-devops',
     supportedTargetTypes: ['pr', 'mr'],
     handlerFactory: (
       project: string,
       prNumber: number,
-      opts: AzureDevOpsTfsOptions
-    ) => new AzureDevOpsTfsPrHandler(project, prNumber, opts),
-    detectFunc: AzureDevOpsTfsPrHandler.detect,
+      opts: AzureDevOpsOptions
+    ) => new AzureDevOpsPrHandler(project, prNumber, opts),
+    detectFunc: AzureDevOpsPrHandler.detect,
   },
   {
     displayName: 'Azure DevOps (GitHub) pull request',
