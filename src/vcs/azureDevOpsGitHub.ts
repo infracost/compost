@@ -1,10 +1,14 @@
 import { Logger } from '../util';
 import { DetectResult } from '../types';
-import { GitHubCommitHandler, GitHubPrHandler } from './github';
+import {
+  GitHubCommitHandler,
+  GitHubDetectResult,
+  GitHubPrHandler,
+} from './github';
 import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
 
 export class AzureDevOpsGitHubPrHandler extends GitHubPrHandler {
-  static detect(logger: Logger): DetectResult | null {
+  static detect(logger: Logger): GitHubDetectResult | null {
     logger.debug('Checking for Azure DevOps (GitHub) pull request');
 
     if (!checkEnvVarExists('SYSTEM_COLLECTIONURI', logger)) {
@@ -14,6 +18,13 @@ export class AzureDevOpsGitHubPrHandler extends GitHubPrHandler {
     if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub', logger)) {
       return null;
     }
+
+    const token = checkEnvVarExists('GITHUB_TOKEN', logger);
+    if (!token) {
+      return null;
+    }
+
+    const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
 
     const project = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
     if (!project) {
@@ -41,12 +52,16 @@ export class AzureDevOpsGitHubPrHandler extends GitHubPrHandler {
       project,
       targetType: 'pr',
       targetRef: prNumber,
+      opts: {
+        token,
+        apiUrl,
+      },
     };
   }
 }
 
 export class AzureDevOpsGitHubCommitHandler extends GitHubCommitHandler {
-  static detect(logger: Logger): DetectResult | null {
+  static detect(logger: Logger): GitHubDetectResult | null {
     logger.debug('Checking for Azure DevOps (GitHub) commit');
 
     if (!checkEnvVarExists('SYSTEM_COLLECTIONURI', logger)) {
@@ -56,6 +71,13 @@ export class AzureDevOpsGitHubCommitHandler extends GitHubCommitHandler {
     if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub', logger)) {
       return null;
     }
+
+    const token = checkEnvVarExists('GITHUB_TOKEN', logger);
+    if (!token) {
+      return null;
+    }
+
+    const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
 
     const project = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
     if (!project) {
@@ -75,6 +97,10 @@ export class AzureDevOpsGitHubCommitHandler extends GitHubCommitHandler {
       project,
       targetType: 'commit',
       targetRef: commitSha,
+      opts: {
+        token,
+        apiUrl,
+      },
     };
   }
 }

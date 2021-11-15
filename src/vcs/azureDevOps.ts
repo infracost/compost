@@ -10,7 +10,7 @@ export type AzureDevOpsOptions = CommentHandlerOptions & {
   token: string;
 };
 
-type AzureDevOpsDetectResult = DetectResult & {
+export type AzureDevOpsDetectResult = DetectResult & {
   opts: AzureDevOpsOptions;
 };
 

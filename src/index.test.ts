@@ -14,6 +14,8 @@ describe('Compost', () => {
 
     it('detects GitHub PR', () => {
       process.env.GITHUB_ACTIONS = 'true';
+      process.env.GITHUB_API_URL = 'https://api.github.com';
+      process.env.GITHUB_TOKEN = 'token';
       process.env.GITHUB_REPOSITORY = 'infracost/compost-e2e-tests-temp';
       process.env.GITHUB_PULL_REQUEST_NUMBER = '1';
 
@@ -22,6 +24,10 @@ describe('Compost', () => {
         project: 'infracost/compost-e2e-tests-temp',
         targetType: 'pr',
         targetRef: 1,
+        opts: {
+          token: 'token',
+          apiUrl: 'https://api.github.com',
+        },
       });
     });
   });

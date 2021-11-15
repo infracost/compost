@@ -10,7 +10,11 @@ const OctokitWithRetries = Octokit.plugin(retry);
 
 export type GitHubOptions = CommentHandlerOptions & {
   token: string;
-  apiUrl: string;
+  apiUrl?: string;
+};
+
+export type GitHubDetectResult = DetectResult & {
+  opts: GitHubOptions;
 };
 
 class GitHubComment implements Comment {
@@ -89,12 +93,19 @@ export class GitHubPrHandler extends GitHubHandler {
     super(project, opts as GitHubOptions);
   }
 
-  static detect(logger: Logger): DetectResult | null {
+  static detect(logger: Logger): GitHubDetectResult | null {
     logger.debug('Checking for GitHub Actions pull request');
 
     if (!checkEnvVarValue('GITHUB_ACTIONS', 'true', logger)) {
       return null;
     }
+
+    const token = checkEnvVarExists('GITHUB_TOKEN', logger);
+    if (!token) {
+      return null;
+    }
+
+    const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
 
     const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
     if (!project) {
@@ -119,6 +130,10 @@ export class GitHubPrHandler extends GitHubHandler {
       project,
       targetType: 'pr',
       targetRef: prNumber,
+      opts: {
+        token,
+        apiUrl,
+      },
     };
   }
 
@@ -265,12 +280,19 @@ export class GitHubCommitHandler extends GitHubHandler {
     super(project, opts as GitHubOptions);
   }
 
-  static detect(logger: Logger): DetectResult | null {
+  static detect(logger: Logger): GitHubDetectResult | null {
     logger.debug('Checking for GitHub Actions commit');
 
     if (!checkEnvVarValue('GITHUB_ACTIONS', 'true', logger)) {
       return null;
     }
+
+    const token = checkEnvVarExists('GITHUB_TOKEN', logger);
+    if (!token) {
+      return null;
+    }
+
+    const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
 
     const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
     if (!project) {
@@ -287,6 +309,10 @@ export class GitHubCommitHandler extends GitHubHandler {
       project,
       targetType: 'commit',
       targetRef: commitSha,
+      opts: {
+        token,
+        apiUrl,
+      },
     };
   }
 

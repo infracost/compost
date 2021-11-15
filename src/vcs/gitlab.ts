@@ -9,6 +9,10 @@ export type GitLabOptions = CommentHandlerOptions & {
   serverUrl: string;
 };
 
+export type GitLabDetectResult = DetectResult & {
+  opts: GitLabOptions;
+};
+
 class GitLabComment implements Comment {
   constructor(
     public id: string,
@@ -58,12 +62,19 @@ export class GitLabMrHandler extends GitLabHandler {
     super(project, opts as GitLabOptions);
   }
 
-  static detect(logger: Logger): DetectResult | null {
+  static detect(logger: Logger): GitLabDetectResult | null {
     logger.debug('Checking for GitLab CI merge request');
 
     if (!checkEnvVarValue('GITLAB_CI', 'true', logger)) {
       return null;
     }
+
+    const token = checkEnvVarExists('GITLAB_TOKEN', logger);
+    if (!token) {
+      return null;
+    }
+
+    const serverUrl = checkEnvVarExists('CI_SERVER_URL', logger);
 
     const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
     if (!project) {
@@ -88,6 +99,10 @@ export class GitLabMrHandler extends GitLabHandler {
       project,
       targetType: 'mr',
       targetRef: mrNumber,
+      opts: {
+        token,
+        serverUrl,
+      },
     };
   }
 
