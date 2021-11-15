@@ -26,41 +26,40 @@ npm link
 
 ## Examples
 
-Detect the current CI environment and update the previously posted comment. If a previous comment hasn't been posted, then this creates a new comment.
+Detect the current CI environment and update the previously posted comment. If a previous comment hasn't been posted, then this creates a new comment:
 
 ```sh
 compost autodetect update --body="my comment"
 ```
 
-Detect the current CI environment and post a new comment.
+Post a new comment:
 
 ```sh
 compost autodetect new --body="my new comment"
 ```
 
-Detect the current CI environment, delete the previous posted comments and post a new comment.
+Delete the previous posted comments and post a new comment:
 
 ```sh
 compost autodetect delete_and_new --body="my new comment"
 ```
 
-Detect the current CI environment, hide the previous posted comments and post a new comment.
-**Note:** Currently only supported for GitHub.
+Hide the previous posted comments and post a new comment (**Note:** Currently only supported for GitHub):
 
 ```sh
 compost autodetect hide_and_new --body="my new comment"
 ```
 
-Post a comment to a specific GitHub pull request
+Post a comment to a specific GitHub pull request:
 
 ```sh
 compost github infracost/compost-example pr 3 --body="my PR comment"
 ```
 
-Post a comment to a specific GitHub commit SHA
+Post a comment to a specific GitHub commit SHA:
 
 ```sh
-compose github infracost/compost-example commit 2ca7182 --body="my commit comment"
+compost github infracost/compost-example commit 2ca7182 --body="my commit comment"
 ```
 
 ## Flags
