@@ -17,7 +17,7 @@ export default class AzureDevOpsTfsCommand extends BaseCommand {
   static flags = {
     ...BaseCommand.flags,
     'azure-devops-token': flags.string({
-      description: 'Azure DevOps token',
+      description: 'Azure DevOps PAT token or a base64 encoded bearer token',
     }),
     'azure-devops-server-url': flags.string({
       description: 'Azure DevOps server URL',

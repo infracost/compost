@@ -4,6 +4,8 @@ import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
 import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
 
+const patTokenLength = 52;
+
 export type AzureDevOpsTfsOptions = CommentHandlerOptions & {
   token: string;
   serverUrl: string;
@@ -79,6 +81,19 @@ abstract class AzureDevOpsTfsHandler extends BaseCommentHandler<AzureDevOpsTfsCo
 
     this.serverUrl = this.serverUrl || 'https://dev.azure.com';
   }
+
+  protected authHeaders() {
+    let val = `Bearer ${this.token}`;
+
+    const isPat = this.token.length === patTokenLength;
+    if (isPat) {
+      val = `Basic ${Buffer.from(`:${this.token}`).toString('base64')}`;
+    }
+
+    return {
+      Authorization: val,
+    };
+  }
 }
 
 export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
@@ -141,9 +156,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
     }>(
       `${this.serverUrl}/${this.org}/${this.teamProject}/_apis/git/repositories/${this.repo}/pullRequests/${this.prNumber}/threads?api-version=6.0`,
       {
-        headers: {
-          Authorization: `Basic ${this.token}`,
-        },
+        headers: this.authHeaders(),
       }
     );
 
@@ -201,9 +214,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
         status: 4,
       },
       {
-        headers: {
-          Authorization: `Basic ${this.token}`,
-        },
+        headers: this.authHeaders(),
       }
     );
 
@@ -235,18 +246,14 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
         commentType: 1,
       },
       {
-        headers: {
-          Authorization: `Basic ${this.token}`,
-        },
+        headers: this.authHeaders(),
       }
     );
   }
 
   async callDeleteComment(comment: AzureDevOpsTfsComment): Promise<void> {
     await axios.delete(`${comment.selfHref}?api-version=6.0`, {
-      headers: {
-        Authorization: `Basic ${this.token}`,
-      },
+      headers: this.authHeaders(),
     });
   }
 
