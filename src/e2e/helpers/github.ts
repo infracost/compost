@@ -5,11 +5,11 @@ import { Octokit } from 'octokit';
 import { retry } from '@octokit/plugin-retry';
 
 const readmeContents =
-  'This repo2 is automatically created by the [compost](https://github.com/infracost/compost) E2E tests';
+  'This repo is automatically created by the [compost](https://github.com/infracost/compost) E2E tests';
 
 const OctokitWithRetries = Octokit.plugin(retry);
 const octokit: Octokit = new OctokitWithRetries({
-  auth: process.env.COMPOST_E2E_GITHUB_TOKEN,
+  auth: global.env.COMPOST_E2E_GITHUB_TOKEN,
 });
 
 function splitRepo(repo: string): [string, string] {

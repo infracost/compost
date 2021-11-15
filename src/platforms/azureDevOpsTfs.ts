@@ -109,18 +109,36 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
     logger.debug('Checking for Azure DevOps (TFS) pull request');
 
     const collectionUri = checkEnvVarExists('SYSTEM_COLLECTIONURI', logger);
+    if (!collectionUri) {
+      return null;
+    }
+
     // The collection URI is in the format https://dev.azure.com/org/
     const org = collectionUri.replace(/\/+$/, '').split('/').at(-1);
 
-    checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger);
+    if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger)) {
+      return null;
+    }
 
     const teamProject = checkEnvVarExists('SYSTEM_TEAMPROJECT', logger);
-    const repo = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
-    const prNumber = Number.parseInt(
-      checkEnvVarExists('SYSTEM_PULLREQUEST_PULLREQUESTID', logger),
-      10
-    );
+    if (!teamProject) {
+      return null;
+    }
 
+    const repo = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
+    if (!repo) {
+      return null;
+    }
+
+    const prNumberVal = checkEnvVarExists(
+      'SYSTEM_PULLREQUEST_PULLREQUESTID',
+      logger
+    );
+    if (!prNumberVal) {
+      return null;
+    }
+
+    const prNumber = Number.parseInt(prNumberVal, 10);
     if (Number.isNaN(prNumber)) {
       logger.debug(
         `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not a valid number`

@@ -92,13 +92,21 @@ export class GitHubPrHandler extends GitHubHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for GitHub Actions pull request');
 
-    checkEnvVarValue('GITHUB_ACTIONS', 'true', logger);
-    const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
-    const prNumber = Number.parseInt(
-      checkEnvVarExists('GITHUB_PULL_REQUEST_NUMBER', logger),
-      10
-    );
+    if (!checkEnvVarValue('GITHUB_ACTIONS', 'true', logger)) {
+      return null;
+    }
 
+    const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
+    if (!project) {
+      return null;
+    }
+
+    const prNumberVal = checkEnvVarExists('GITHUB_PULL_REQUEST_NUMBER', logger);
+    if (!prNumberVal) {
+      return null;
+    }
+
+    const prNumber = Number.parseInt(prNumberVal, 10);
     if (Number.isNaN(prNumber)) {
       logger.debug(
         `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
@@ -260,9 +268,19 @@ export class GitHubCommitHandler extends GitHubHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for GitHub Actions commit');
 
-    checkEnvVarValue('GITHUB_ACTIONS', 'true', logger);
+    if (!checkEnvVarValue('GITHUB_ACTIONS', 'true', logger)) {
+      return null;
+    }
+
     const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
+    if (!project) {
+      return null;
+    }
+
     const commitSha = checkEnvVarExists('GITHUB_COMMIT_SHA', logger);
+    if (!commitSha) {
+      return null;
+    }
 
     return {
       platform: 'github',

@@ -7,14 +7,28 @@ export class AzureDevOpsGitHubPrHandler extends GitHubPrHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for Azure DevOps (GitHub) pull request');
 
-    checkEnvVarExists('SYSTEM_COLLECTIONURI', logger);
-    checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub', logger);
-    const project = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
-    const prNumber = Number.parseInt(
-      checkEnvVarExists('SYSTEM_PULLREQUEST_PULLREQUESTNUMBER', logger),
-      10
-    );
+    if (!checkEnvVarExists('SYSTEM_COLLECTIONURI', logger)) {
+      return null;
+    }
 
+    if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub', logger)) {
+      return null;
+    }
+
+    const project = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
+    if (!project) {
+      return null;
+    }
+
+    const prNumberVal = checkEnvVarExists(
+      'SYSTEM_PULLREQUEST_PULLREQUESTNUMBER',
+      logger
+    );
+    if (!prNumberVal) {
+      return null;
+    }
+
+    const prNumber = parseInt(prNumberVal, 10);
     if (Number.isNaN(prNumber)) {
       logger.debug(
         `SYSTEM_PULLREQUEST_PULLREQUESTNUMBER environment variable is not a valid number`
@@ -35,13 +49,26 @@ export class AzureDevOpsGitHubCommitHandler extends GitHubCommitHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for Azure DevOps (GitHub) commit');
 
-    checkEnvVarExists('SYSTEM_COLLECTIONURI', logger);
-    checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub', logger);
+    if (!checkEnvVarExists('SYSTEM_COLLECTIONURI', logger)) {
+      return null;
+    }
+
+    if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub', logger)) {
+      return null;
+    }
+
     const project = checkEnvVarExists('BUILD_REPOSITORY_NAME', logger);
+    if (!project) {
+      return null;
+    }
+
     const commitSha = checkEnvVarExists(
       'SYSTEM_PULLREQUEST_SOURCECOMMITID',
       logger
     );
+    if (!commitSha) {
+      return null;
+    }
 
     return {
       platform: 'azure-devops-github',

@@ -7,4 +7,4 @@ dist
 
 # env
 /.env*
-!/.env.e2e.example
+!/.env.test.example

@@ -19,7 +19,7 @@ module.exports = {
   },
   rules: {
     'import/extensions': 'off',
-    'import/no-extraneous-dependencies': ['error', {'devDependencies': ['**/*.test.ts', 'src/e2e/**']}],
+    'import/no-extraneous-dependencies': ['error', {'devDependencies': ['**/*.test.ts', 'src/setupTests.ts']}],
     'max-classes-per-file': 'off',
     'max-len': 'off',
     'no-await-in-loop': 'off',

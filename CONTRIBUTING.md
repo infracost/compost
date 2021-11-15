@@ -1,14 +1,21 @@
 # Contributing
 
-## Running E2E tests
+## Running tests
 
-Setup the E2E environment:
+### Unit tests
 
 ```sh
-cp .env.e2e.example .env.e2e
+npm run test
 ```
 
-Edit the `.env.e2e` file and add any required env variables.
+### E2E tests
+
+Setup any environment variables required for the E2E environment:
+
+```sh
+cp .env.test.example .env.test
+# Edit .env.test to add any required environment variables
+```
 
 Run the E2E tests:
 

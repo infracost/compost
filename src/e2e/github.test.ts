@@ -9,27 +9,25 @@ import {
 describe('github pr', () => {
   jest.setTimeout(30_000);
 
-  const origEnv = process.env;
-
   let token: string;
   let repo: string;
   let prNumber: number;
   let stdout: string;
 
   beforeAll(async () => {
-    process.env = {};
-
-    token = origEnv.COMPOST_E2E_GITHUB_TOKEN;
-    repo = origEnv.COMPOST_E2E_GITHUB_REPO;
+    token = global.env.COMPOST_E2E_GITHUB_TOKEN;
+    repo = global.env.COMPOST_E2E_GITHUB_REPO;
 
     if (!token) {
       throw new Error(
-        `Expected COMPOST_E2E_GITHUB_TOKEN to be set in .env.e2e`
+        `Expected COMPOST_E2E_GITHUB_TOKEN to be set in .env.test`
       );
     }
 
     if (!repo) {
-      throw new Error(`Expected COMPOST_E2E_GITHUB_REPO to be set in .env.e2e`);
+      throw new Error(
+        `Expected COMPOST_E2E_GITHUB_REPO to be set in .env.test`
+      );
     }
 
     await deleteRepoIfExists(repo);
@@ -39,8 +37,6 @@ describe('github pr', () => {
 
   afterAll(async () => {
     await deleteRepoIfExists(repo);
-
-    process.env = origEnv;
   });
 
   beforeEach(() => {

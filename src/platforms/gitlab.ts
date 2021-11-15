@@ -61,13 +61,21 @@ export class GitLabMrHandler extends GitLabHandler {
   static detect(logger: Logger): DetectResult | null {
     logger.debug('Checking for GitLab CI merge request');
 
-    checkEnvVarValue('GITLAB_CI', 'true', logger);
-    const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
-    const mrNumber = Number.parseInt(
-      checkEnvVarExists('CI_MERGE_REQUEST_IID', logger),
-      10
-    );
+    if (!checkEnvVarValue('GITLAB_CI', 'true', logger)) {
+      return null;
+    }
 
+    const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
+    if (!project) {
+      return null;
+    }
+
+    const mrNumberVal = checkEnvVarExists('CI_MERGE_REQUEST_IID', logger);
+    if (!mrNumberVal) {
+      return null;
+    }
+
+    const mrNumber = Number.parseInt(mrNumberVal, 10);
     if (Number.isNaN(mrNumber)) {
       logger.debug(
         `CI_MERGE_REQUEST_IID environment variable is not a valid number`
