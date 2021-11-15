@@ -84,7 +84,7 @@ export class GitLabMrHandler extends GitLabHandler {
     }
 
     return {
-      platform: 'gitlab',
+      vcs: 'gitlab',
       project,
       targetType: 'mr',
       targetRef: mrNumber,

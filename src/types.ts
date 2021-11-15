@@ -1,6 +1,6 @@
 import { ErrorHandler, Logger } from './util';
 
-export type Platform =
+export type VCS =
   | 'github'
   | 'gitlab'
   | 'azure-devops-tfs'
@@ -20,7 +20,7 @@ export type CommentHandlerOptions = {
 };
 
 export type DetectResult = {
-  platform: Platform;
+  vcs: VCS;
   project: string;
   targetType: TargetType;
   targetRef: TargetReference;

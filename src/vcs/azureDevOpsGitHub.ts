@@ -37,7 +37,7 @@ export class AzureDevOpsGitHubPrHandler extends GitHubPrHandler {
     }
 
     return {
-      platform: 'azure-devops-github',
+      vcs: 'azure-devops-github',
       project,
       targetType: 'pr',
       targetRef: prNumber,
@@ -71,7 +71,7 @@ export class AzureDevOpsGitHubCommitHandler extends GitHubCommitHandler {
     }
 
     return {
-      platform: 'azure-devops-github',
+      vcs: 'azure-devops-github',
       project,
       targetType: 'commit',
       targetRef: commitSha,

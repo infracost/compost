@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
 import Compost from '../..';
-import { AzureDevOpsTfsOptions } from '../../platforms/azureDevOpsTfs';
+import { AzureDevOpsTfsOptions } from '../../vcs/azureDevOpsTfs';
 import BaseCommand from '../base';
 
 export default class AzureDevOpsTfsCommand extends BaseCommand {

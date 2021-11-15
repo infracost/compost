@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
 import Compost from '../..';
-import { GitLabOptions } from '../../platforms/gitlab';
+import { GitLabOptions } from '../../vcs/gitlab';
 import BaseCommand from '../base';
 
 export default class GitLabCommand extends BaseCommand {

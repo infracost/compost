@@ -1,11 +1,11 @@
-import registry from './platforms/registry';
+import registry from './vcs/registry';
 import {
   TargetType,
   TargetReference,
   Behavior,
   CommentHandler,
   DetectResult,
-  Platform,
+  VCS,
   CommentHandlerOptions,
 } from './types';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from './util';
@@ -23,16 +23,16 @@ export default class Compost {
     this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
   }
 
-  // Find the comment handler for the given platform and target type and construct it
+  // Find the comment handler for the given VCS and target type and construct it
   private commentHandlerFactory(
-    platform: Platform,
+    vcs: VCS,
     project: string,
     targetType: TargetType,
     targetRef: TargetReference
   ): CommentHandler | null {
     for (const config of registry) {
       if (
-        config.platform === platform &&
+        config.vcs === vcs &&
         config.supportedTargetTypes.includes(targetType)
       ) {
         return config.handlerFactory(project, targetRef, this.opts);
@@ -68,7 +68,7 @@ export default class Compost {
 
   // Post a comment to the pull/merge request or commit
   async postComment(
-    platform: Platform,
+    vcs: VCS,
     project: string,
     targetType: TargetType,
     targetRef: TargetReference,
@@ -76,7 +76,7 @@ export default class Compost {
     body: string
   ): Promise<void> {
     const handler = this.commentHandlerFactory(
-      platform,
+      vcs,
       project,
       targetType,
       targetRef
@@ -84,7 +84,7 @@ export default class Compost {
 
     if (handler === null) {
       this.errorHandler(
-        `Unable to find comment handler for platform ${platform}, target type ${targetType}`
+        `Unable to find comment handler for vcs ${vcs}, target type ${targetType}`
       );
     }
 

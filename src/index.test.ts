@@ -18,7 +18,7 @@ describe('Compost', () => {
       process.env.GITHUB_PULL_REQUEST_NUMBER = '1';
 
       expect(compost.detectEnvironment()).toEqual({
-        platform: 'github',
+        vcs: 'github',
         project: 'infracost/compost-e2e-tests-temp',
         targetType: 'pr',
         targetRef: 1,

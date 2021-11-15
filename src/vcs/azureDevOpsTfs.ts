@@ -147,7 +147,7 @@ export class AzureDevOpsTfsPrHandler extends AzureDevOpsTfsHandler {
     }
 
     return {
-      platform: 'azure-devops-tfs',
+      vcs: 'azure-devops-tfs',
       project: `${org}/${teamProject}/${repo}`,
       targetType: 'pr',
       targetRef: prNumber,

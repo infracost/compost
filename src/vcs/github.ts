@@ -115,7 +115,7 @@ export class GitHubPrHandler extends GitHubHandler {
     }
 
     return {
-      platform: 'github',
+      vcs: 'github',
       project,
       targetType: 'pr',
       targetRef: prNumber,
@@ -283,7 +283,7 @@ export class GitHubCommitHandler extends GitHubHandler {
     }
 
     return {
-      platform: 'github',
+      vcs: 'github',
       project,
       targetType: 'commit',
       targetRef: commitSha,

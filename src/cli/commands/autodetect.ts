@@ -1,11 +1,11 @@
 import { flags } from '@oclif/parser';
 import Compost from '../..';
-import { Behavior, Platform } from '../../types';
+import { Behavior, VCS } from '../../types';
 import BaseCommand from '../base';
 
 export default class AutoDetect extends BaseCommand {
   static description =
-    'Auto-detect the platform and post a comment to a {pull|merge} request/commit';
+    'Auto-detect the CI environment and post a comment to a pull/merge request or commit';
 
   static examples = [
     `• Update the previously posted comment, or create if it doesn't exist:
@@ -51,10 +51,10 @@ export default class AutoDetect extends BaseCommand {
       this.error('Unable to detect current environment');
     }
 
-    const { platform, project, targetType, targetRef } = detectResult;
+    const { vcs, project, targetType, targetRef } = detectResult;
 
     await comments.postComment(
-      platform as Platform,
+      vcs as VCS,
       project,
       targetType,
       targetRef,
