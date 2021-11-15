@@ -4,7 +4,7 @@ import { retry } from '@octokit/plugin-retry';
 import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
-import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
+import { checkEnvVarExists, checkEnvVarValue, DetectError } from '../cli/base';
 
 const OctokitWithRetries = Octokit.plugin(retry);
 
@@ -96,45 +96,41 @@ export class GitHubPrHandler extends GitHubHandler {
   static detect(logger: Logger): GitHubDetectResult | null {
     logger.debug('Checking for GitHub Actions pull request');
 
-    if (!checkEnvVarValue('GITHUB_ACTIONS', 'true', logger)) {
-      return null;
-    }
-
-    const token = checkEnvVarExists('GITHUB_TOKEN', logger);
-    if (!token) {
-      return null;
-    }
-
-    const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
-
-    const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
-    if (!project) {
-      return null;
-    }
-
-    const prNumberVal = checkEnvVarExists('GITHUB_PULL_REQUEST_NUMBER', logger);
-    if (!prNumberVal) {
-      return null;
-    }
-
-    const prNumber = Number.parseInt(prNumberVal, 10);
-    if (Number.isNaN(prNumber)) {
-      logger.debug(
-        `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
+    try {
+      checkEnvVarValue('GITHUB_ACTIONS', 'true', logger);
+      const token = checkEnvVarExists('GITHUB_TOKEN', logger);
+      const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
+      const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
+      const prNumberVal = checkEnvVarExists(
+        'GITHUB_PULL_REQUEST_NUMBER',
+        logger
       );
+
+      const prNumber = Number.parseInt(prNumberVal, 10);
+      if (Number.isNaN(prNumber)) {
+        throw new DetectError(
+          `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
+        );
+      }
+
+      return {
+        vcs: 'github',
+        project,
+        targetType: 'pr',
+        targetRef: prNumber,
+        opts: {
+          token,
+          apiUrl,
+        },
+      };
+    } catch (err) {
+      if (err.name !== DetectError.name) {
+        throw err;
+      }
+
+      logger.debug(err);
       return null;
     }
-
-    return {
-      vcs: 'github',
-      project,
-      targetType: 'pr',
-      targetRef: prNumber,
-      opts: {
-        token,
-        apiUrl,
-      },
-    };
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
@@ -283,37 +279,31 @@ export class GitHubCommitHandler extends GitHubHandler {
   static detect(logger: Logger): GitHubDetectResult | null {
     logger.debug('Checking for GitHub Actions commit');
 
-    if (!checkEnvVarValue('GITHUB_ACTIONS', 'true', logger)) {
+    try {
+      checkEnvVarValue('GITHUB_ACTIONS', 'true', logger);
+      const token = checkEnvVarExists('GITHUB_TOKEN', logger);
+      const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
+      const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
+      const commitSha = checkEnvVarExists('GITHUB_COMMIT_SHA', logger);
+
+      return {
+        vcs: 'github',
+        project,
+        targetType: 'commit',
+        targetRef: commitSha,
+        opts: {
+          token,
+          apiUrl,
+        },
+      };
+    } catch (err) {
+      if (err.name !== DetectError.name) {
+        throw err;
+      }
+
+      logger.debug(err);
       return null;
     }
-
-    const token = checkEnvVarExists('GITHUB_TOKEN', logger);
-    if (!token) {
-      return null;
-    }
-
-    const apiUrl = checkEnvVarExists('GITHUB_API_URL', logger);
-
-    const project = checkEnvVarExists('GITHUB_REPOSITORY', logger);
-    if (!project) {
-      return null;
-    }
-
-    const commitSha = checkEnvVarExists('GITHUB_COMMIT_SHA', logger);
-    if (!commitSha) {
-      return null;
-    }
-
-    return {
-      vcs: 'github',
-      project,
-      targetType: 'commit',
-      targetRef: commitSha,
-      opts: {
-        token,
-        apiUrl,
-      },
-    };
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {

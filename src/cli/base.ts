@@ -9,6 +9,14 @@ import {
   Behavior,
 } from '../types';
 
+export class DetectError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = this.constructor.name;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
 export default abstract class BaseCommand extends Command {
   static flags = {
     help: flags.help({ char: 'h', description: 'Show help' }),
@@ -132,13 +140,10 @@ export default abstract class BaseCommand extends Command {
 export function checkEnvVarExists(
   name: string,
   logger?: Logger
-): string | undefined {
+): string | never {
   const value = process.env[name];
   if (value === undefined) {
-    if (logger) {
-      logger.debug(`${name} environment variable is not set`);
-    }
-    return undefined;
+    throw new DetectError(`${name} environment variable is not set`);
   }
 
   logger.debug(`${name} is set to ${value}`);
@@ -151,20 +156,12 @@ export function checkEnvVarValue(
   name: string,
   expectedValue: string,
   logger?: Logger
-): boolean {
+): void | never {
   const value = checkEnvVarExists(name, logger);
-  if (value === undefined) {
-    return false;
-  }
 
   if (value !== expectedValue) {
-    if (logger) {
-      logger.debug(
-        `${name} environment variable is set to ${value}, not ${expectedValue}`
-      );
-    }
-    return false;
+    throw new DetectError(
+      `${name} environment variable is set to ${value}, not ${expectedValue}`
+    );
   }
-
-  return true;
 }

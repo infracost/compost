@@ -2,7 +2,7 @@ import axios from 'axios';
 import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
-import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
+import { checkEnvVarExists, checkEnvVarValue, DetectError } from '../cli/base';
 
 export type GitLabOptions = CommentHandlerOptions & {
   token: string;
@@ -65,45 +65,39 @@ export class GitLabMrHandler extends GitLabHandler {
   static detect(logger: Logger): GitLabDetectResult | null {
     logger.debug('Checking for GitLab CI merge request');
 
-    if (!checkEnvVarValue('GITLAB_CI', 'true', logger)) {
+    try {
+      checkEnvVarValue('GITLAB_CI', 'true', logger);
+      const token = checkEnvVarExists('GITLAB_TOKEN', logger);
+      const serverUrl = checkEnvVarExists('CI_SERVER_URL', logger);
+      const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
+      const mrNumberVal = checkEnvVarExists('CI_MERGE_REQUEST_IID', logger);
+
+      const mrNumber = Number.parseInt(mrNumberVal, 10);
+      if (Number.isNaN(mrNumber)) {
+        logger.debug(
+          `CI_MERGE_REQUEST_IID environment variable is not a valid number`
+        );
+        return null;
+      }
+
+      return {
+        vcs: 'gitlab',
+        project,
+        targetType: 'mr',
+        targetRef: mrNumber,
+        opts: {
+          token,
+          serverUrl,
+        },
+      };
+    } catch (err) {
+      if (err.name !== DetectError.name) {
+        throw err;
+      }
+
+      logger.debug(err);
       return null;
     }
-
-    const token = checkEnvVarExists('GITLAB_TOKEN', logger);
-    if (!token) {
-      return null;
-    }
-
-    const serverUrl = checkEnvVarExists('CI_SERVER_URL', logger);
-
-    const project = checkEnvVarExists('CI_PROJECT_PATH', logger);
-    if (!project) {
-      return null;
-    }
-
-    const mrNumberVal = checkEnvVarExists('CI_MERGE_REQUEST_IID', logger);
-    if (!mrNumberVal) {
-      return null;
-    }
-
-    const mrNumber = Number.parseInt(mrNumberVal, 10);
-    if (Number.isNaN(mrNumber)) {
-      logger.debug(
-        `CI_MERGE_REQUEST_IID environment variable is not a valid number`
-      );
-      return null;
-    }
-
-    return {
-      vcs: 'gitlab',
-      project,
-      targetType: 'mr',
-      targetRef: mrNumber,
-      opts: {
-        token,
-        serverUrl,
-      },
-    };
   }
 
   async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {

@@ -2,7 +2,7 @@ import axios from 'axios';
 import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
-import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
+import { checkEnvVarExists, checkEnvVarValue, DetectError } from '../cli/base';
 
 const patTokenLength = 52;
 
@@ -106,45 +106,39 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
   static detect(logger: Logger): AzureDevOpsDetectResult | null {
     logger.debug('Checking for Azure DevOps pull request');
 
-    const token = checkEnvVarExists(process.env.SYSTEM_ACCESSTOKEN, logger);
-    if (!token) {
-      return null;
-    }
-
-    if (!checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger)) {
-      return null;
-    }
-
-    const repo = checkEnvVarExists('BUILD_REPOSITORY_URI', logger);
-    if (!repo) {
-      return null;
-    }
-
-    const prNumberVal = checkEnvVarExists(
-      'SYSTEM_PULLREQUEST_PULLREQUESTID',
-      logger
-    );
-    if (!prNumberVal) {
-      return null;
-    }
-
-    const prNumber = Number.parseInt(prNumberVal, 10);
-    if (Number.isNaN(prNumber)) {
-      logger.debug(
-        `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not a valid number`
+    try {
+      checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit', logger);
+      const token = checkEnvVarExists(process.env.SYSTEM_ACCESSTOKEN, logger);
+      const repo = checkEnvVarExists('BUILD_REPOSITORY_URI', logger);
+      const prNumberVal = checkEnvVarExists(
+        'SYSTEM_PULLREQUEST_PULLREQUESTID',
+        logger
       );
+
+      const prNumber = Number.parseInt(prNumberVal, 10);
+      if (Number.isNaN(prNumber)) {
+        throw new DetectError(
+          `SYSTEM_PULLREQUEST_PULLREQUESTID environment variable is not a valid number`
+        );
+      }
+
+      return {
+        vcs: 'azure-devops',
+        project: repo,
+        targetType: 'pr',
+        targetRef: prNumber,
+        opts: {
+          token,
+        },
+      };
+    } catch (err) {
+      if (err.name !== DetectError.name) {
+        throw err;
+      }
+
+      logger.debug(err);
       return null;
     }
-
-    return {
-      vcs: 'azure-devops',
-      project: repo,
-      targetType: 'pr',
-      targetRef: prNumber,
-      opts: {
-        token: process.env.AZURE_DEVOPS_EXT_PAT,
-      },
-    };
   }
 
   async callFindMatchingComments(tag: string): Promise<AzureDevOpsComment[]> {
