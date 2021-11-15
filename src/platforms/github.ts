@@ -1,9 +1,12 @@
 import { Octokit } from 'octokit';
 import { Repository } from '@octokit/graphql-schema';
+import { retry } from '@octokit/plugin-retry';
 import BaseCommentHandler, { Comment } from './base';
 import { Logger } from '../util';
 import { CommentHandlerOptions, DetectResult } from '../types';
 import { checkEnvVarExists, checkEnvVarValue } from '../cli/base';
+
+const OctokitWithRetries = Octokit.plugin(retry);
 
 export type GitHubOptions = CommentHandlerOptions & {
   token: string;
@@ -25,7 +28,8 @@ class GitHubComment implements Comment {
   }
 
   sortKey(): string {
-    return this.createdAt;
+    // Use ID as well if issues were posted in the same second
+    return `${this.createdAt} ${this.id}`;
   }
 
   isHidden(): boolean {
@@ -69,9 +73,9 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
     this.apiUrl =
       opts?.apiUrl || process.env.GITHUB_API_URL || 'https://api.github.com';
 
-    this.octokit = new Octokit({
+    this.octokit = new OctokitWithRetries({
       auth: this.token,
-      apiUrl: this.apiUrl,
+      baseUrl: this.apiUrl,
     });
   }
 }
@@ -128,6 +132,7 @@ export class GitHubPrHandler extends GitHubHandler {
                   databaseId
                   url
                   createdAt
+                  publishedAt
                   body
                   isMinimized
                 }
@@ -157,7 +162,7 @@ export class GitHubPrHandler extends GitHubHandler {
             c.id,
             c.databaseId,
             c.body,
-            c.createdAt,
+            c.publishedAt ?? c.createdAt,
             c.url,
             c.isMinimized
           )

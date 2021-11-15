@@ -4,3 +4,7 @@ jspm_packages
 
 # build
 dist
+
+# env
+/.env*
+!/.env.e2e.example

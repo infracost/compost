@@ -72,6 +72,3 @@ compose github infracost/compost-example commit 2ca7182 --body="my commit commen
 | `--tag` | Customize the comment tag. This is added to the comment as a markdown comment to detect the previously posted comments. |
 | `--target-type` | Options: `pr`, `mr`, `commit`. Only supported by `autodetect` command. Limit the auto-detection to add the comment to either pull/merge requests or commits. |
 
-
-
-

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { CommentHandler, CommentHandlerOptions } from '../types';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from '../util';
 
-const defaultTag = 'compost-comment';
+export const defaultTag = 'compost-comment';
 
 export interface Comment {
   body: string;
@@ -185,7 +185,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
   }
 }
 
-function markdownTag(s: string) {
+export function markdownTag(s: string) {
   return `[//]: <> (${s})`;
 }
 
