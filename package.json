@@ -65,7 +65,8 @@
     "format": "prettier --write 'src/**/*.{js,ts}'",
     "lint": "eslint --ext .ts,.js --ignore-path .gitignore .",
     "test": "jest --testPathIgnorePatterns ./e2e --setupFiles ./src/setupTests.ts",
-    "test:e2e": "jest ./e2e --setupFiles ./src/setupTests.ts"
+    "test:e2e": "jest ./e2e --setupFiles ./src/setupTests.ts",
+    "test:e2e:cleanup": "ts-node -r ./src/setupTests.ts ./src/e2e/cleanup.ts"
   },
   "types": "dist/index.d.ts"
 }
