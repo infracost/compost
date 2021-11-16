@@ -3,13 +3,16 @@ import { Command, flags } from '@oclif/command';
 import { args, OutputArgs, OutputFlags } from '@oclif/parser';
 import { format, inspect } from 'util';
 import { IConfig } from '@oclif/config';
-import { ErrorHandler, Logger } from '../util';
+import { ErrorHandler, Logger, stripMarkdownTag } from '../util';
 import {
   CommentHandlerOptions,
   TargetType,
   TargetReference,
   Behavior,
+  Platform,
+  GetBehavior,
 } from '../types';
+import Compost from '..';
 
 export default abstract class BaseCommand extends Command {
   protected logger: Logger;
@@ -80,7 +83,7 @@ export default abstract class BaseCommand extends Command {
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
-  loadBody(flags: OutputFlags<typeof BaseCommand.flags>): string {
+  protected loadBody(flags: OutputFlags<typeof BaseCommand.flags>): string {
     if (flags.body) {
       return flags.body;
     }
@@ -104,7 +107,7 @@ export default abstract class BaseCommand extends Command {
     return '';
   }
 
-  loadBaseOptions(
+  protected loadBaseOptions(
     flags: OutputFlags<typeof BaseCommand.flags>
   ): CommentHandlerOptions {
     return {
@@ -115,7 +118,7 @@ export default abstract class BaseCommand extends Command {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  loadBaseArgs(args: OutputArgs<any>): {
+  protected loadBaseArgs(args: OutputArgs<any>): {
     project: string;
     targetType: TargetType;
     targetRef: TargetReference;
@@ -139,5 +142,38 @@ export default abstract class BaseCommand extends Command {
       targetRef,
       behavior,
     };
+  }
+
+  protected static async runCompost(
+    compost: Compost,
+    platform: Platform,
+    project: string,
+    targetType: TargetType,
+    targetRef: TargetReference,
+    behavior: Behavior,
+    body?: string
+  ): Promise<void> {
+    if (behavior === 'latest') {
+      const comment = await compost.getComment(
+        platform,
+        project,
+        targetType,
+        targetRef,
+        behavior as GetBehavior
+      );
+
+      if (comment) {
+        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+      }
+    } else {
+      await compost.postComment(
+        platform,
+        project,
+        targetType,
+        targetRef,
+        behavior,
+        body
+      );
+    }
   }
 }

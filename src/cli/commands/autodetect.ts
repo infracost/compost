@@ -44,9 +44,9 @@ export default class AutoDetect extends BaseCommand {
 
     const opts = this.loadBaseOptions(flags);
 
-    const comments = new Compost(opts);
+    const compost = new Compost(opts);
 
-    const detectResult = comments.detectEnvironment(
+    const detectResult = compost.detectEnvironment(
       flags['target-type'] as TargetType[]
     );
     if (!detectResult) {
@@ -55,7 +55,8 @@ export default class AutoDetect extends BaseCommand {
 
     const { platform, project, targetType, targetRef } = detectResult;
 
-    await comments.postComment(
+    await BaseCommand.runCompost(
+      compost,
       platform as Platform,
       project,
       targetType,

@@ -1,7 +1,6 @@
 import { flags } from '@oclif/command';
 import Compost from '../..';
 import { GitHubOptions } from '../../platforms/github';
-import { stripMarkdownHeader } from '../../util';
 import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
@@ -49,7 +48,8 @@ export default class GitHubCommand extends BaseCommand {
     };
 
     const compost = new Compost(opts);
-    const comment = await compost.postComment(
+    await BaseCommand.runCompost(
+      compost,
       'github',
       project,
       targetType,
@@ -57,9 +57,5 @@ export default class GitHubCommand extends BaseCommand {
       behavior,
       body
     );
-
-    if (comment) {
-      process.stdout.write(`${stripMarkdownHeader(comment.body)}\n`);
-    }
   }
 }

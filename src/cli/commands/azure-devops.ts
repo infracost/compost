@@ -47,8 +47,9 @@ export default class AzureDevOpsCommand extends BaseCommand {
       token: flags['azure-devops-token'],
     };
 
-    const comments = new Compost(opts);
-    await comments.postComment(
+    const compost = new Compost(opts);
+    await BaseCommand.runCompost(
+      compost,
       'azure-devops',
       project,
       targetType,

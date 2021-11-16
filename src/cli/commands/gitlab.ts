@@ -55,8 +55,9 @@ export default class GitLabCommand extends BaseCommand {
       serverUrl: flags['gitlab-server-url'],
     };
 
-    const comments = new Compost(opts);
-    await comments.postComment(
+    const compost = new Compost(opts);
+    await BaseCommand.runCompost(
+      compost,
       'gitlab',
       project,
       targetType,
