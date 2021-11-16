@@ -20,25 +20,44 @@ export abstract class BaseDetector {
     );
   }
 
+  private static sanitizeValue(value: string, isSecret?: boolean): string {
+    if (isSecret) {
+      return '************';
+    }
+    return value;
+  }
+
   // Checks and logs if the env variable exists and returns the value if it does
-  protected checkEnvVarExists(name: string): string | never {
+  protected checkEnvVarExists(
+    name: string,
+    isSecret?: boolean
+  ): string | never {
     const value = process.env[name];
     if (value === undefined) {
       throw new DetectError(`${name} environment variable is not set`);
     }
 
-    this.logger.debug(`${name} is set to ${value}`);
+    this.logger.debug(
+      `${name} is set to ${BaseDetector.sanitizeValue(value, isSecret)}`
+    );
 
     return value;
   }
 
   // Checks and logs if the env variable equals the expected value
-  protected checkEnvVarValue(name: string, expected: string): void | never {
+  protected checkEnvVarValue(
+    name: string,
+    expected: string,
+    isSecret?: boolean
+  ): void | never {
     const value = this.checkEnvVarExists(name);
 
     if (value !== expected) {
       throw new DetectError(
-        `${name} environment variable is set to ${value}, not ${expected}`
+        `${name} environment variable is set to ${BaseDetector.sanitizeValue(
+          value,
+          isSecret
+        )}, not ${expected}`
       );
     }
   }

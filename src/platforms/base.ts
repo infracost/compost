@@ -1,6 +1,13 @@
 import chalk from 'chalk';
 import { Comment, CommentHandler, CommentHandlerOptions } from '../types';
-import { addMarkdownTag, defaultErrorHandler, ErrorHandler, Logger, markdownTag, NullLogger } from '../util';
+import {
+  addMarkdownTag,
+  defaultErrorHandler,
+  ErrorHandler,
+  Logger,
+  markdownTag,
+  NullLogger,
+} from '../util';
 
 export const defaultTag = 'compost-comment';
 

@@ -8,7 +8,7 @@ export class GitLabCiDetector extends BaseDetector {
     this.logger.debug('Checking for GitLab CI');
 
     this.checkEnvVarValue('GITLAB_CI', 'true');
-    const token = this.checkEnvVarExists('GITLAB_TOKEN');
+    const token = this.checkEnvVarExists('GITLAB_TOKEN', true);
     const project = this.checkEnvVarExists('CI_PROJECT_PATH');
     const serverUrl = process.env.CI_SERVER_URL;
 
