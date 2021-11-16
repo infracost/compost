@@ -3,12 +3,13 @@ import { commentHandlerRegistry, detectorRegistry } from './registry';
 import {
   TargetType,
   TargetReference,
-  Behavior,
   CommentHandler,
   DetectResult,
   Platform,
   Comment,
   CommentHandlerOptions,
+  PostBehavior,
+  GetBehavior,
 } from './types';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from './util';
 
@@ -31,7 +32,7 @@ export default class Compost {
     project: string,
     targetType: TargetType,
     targetRef: TargetReference
-  ): CommentHandler | null {
+  ): CommentHandler | never {
     for (const config of commentHandlerRegistry) {
       if (
         config.platform === platform &&
@@ -41,7 +42,9 @@ export default class Compost {
       }
     }
 
-    return null;
+    const err = `Unable to find comment handler for platform ${platform}, target type ${targetType}`;
+    this.errorHandler(err);
+    throw err;
   }
 
   // Detect the current environment
@@ -78,14 +81,12 @@ export default class Compost {
     return null;
   }
 
-  // Post a comment to the pull/merge request or commit
-  async postComment(
+  async getComment(
     platform: Platform,
     project: string,
     targetType: TargetType,
     targetRef: TargetReference,
-    behavior: Behavior,
-    body: string
+    behavior: GetBehavior
   ): Promise<Comment | null> {
     const handler = this.commentHandlerFactory(
       platform,
@@ -94,13 +95,35 @@ export default class Compost {
       targetRef
     );
 
-    if (handler === null) {
-      this.errorHandler(
-        `Unable to find comment handler for platform ${platform}, target type ${targetType}`
-      );
+    let comment: Comment | null = null;
+
+    switch (behavior) {
+      case 'latest':
+        comment = await handler.latestComment();
+        break;
+      default:
+        // This should never happen
+        throw new Error(`Unknown behavior: ${behavior}`);
     }
 
-    let comment: Comment | null = null;
+    return comment;
+  }
+
+  // Post a comment to the pull/merge request or commit
+  async postComment(
+    platform: Platform,
+    project: string,
+    targetType: TargetType,
+    targetRef: TargetReference,
+    behavior: PostBehavior,
+    body: string
+  ): Promise<void> {
+    const handler = this.commentHandlerFactory(
+      platform,
+      project,
+      targetType,
+      targetRef
+    );
 
     switch (behavior) {
       case 'update':
@@ -115,14 +138,9 @@ export default class Compost {
       case 'delete_and_new':
         await handler.deleteAndNewComment(body);
         break;
-      case 'latest':
-        comment = await handler.latestComment();
-        break;
       default:
         // This should never happen
         throw new Error(`Unknown behavior: ${behavior}`);
     }
-
-    return comment;
   }
 }

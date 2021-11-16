@@ -11,12 +11,11 @@ export type TargetType = 'pr' | 'mr' | 'commit';
 // Pull/merge request number or commit SHA
 export type TargetReference = string | number;
 
-export type Behavior =
-  | 'update'
-  | 'new'
-  | 'hide_and_new'
-  | 'delete_and_new'
-  | 'latest';
+export type PostBehavior = 'update' | 'new' | 'hide_and_new' | 'delete_and_new';
+
+export type GetBehavior = 'latest';
+
+export type Behavior = PostBehavior | GetBehavior;
 
 export type DetectorOptions = {
   targetTypes: TargetType[];
