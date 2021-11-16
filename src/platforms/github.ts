@@ -1,8 +1,8 @@
 import { Octokit } from 'octokit';
 import { Repository } from '@octokit/graphql-schema';
 import { retry } from '@octokit/plugin-retry';
-import BaseCommentHandler, { Comment } from './base';
-import { CommentHandlerOptions, DetectResult } from '../types';
+import BaseCommentHandler from './base';
+import { CommentHandlerOptions, Comment, DetectResult } from '../types';
 
 const OctokitWithRetries = Octokit.plugin(retry);
 

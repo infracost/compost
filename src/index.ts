@@ -7,6 +7,7 @@ import {
   CommentHandler,
   DetectResult,
   Platform,
+  Comment,
   CommentHandlerOptions,
 } from './types';
 import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from './util';
@@ -85,7 +86,7 @@ export default class Compost {
     targetRef: TargetReference,
     behavior: Behavior,
     body: string
-  ): Promise<void> {
+  ): Promise<Comment | null> {
     const handler = this.commentHandlerFactory(
       platform,
       project,
@@ -98,6 +99,8 @@ export default class Compost {
         `Unable to find comment handler for platform ${platform}, target type ${targetType}`
       );
     }
+
+    let comment: Comment | null = null;
 
     switch (behavior) {
       case 'update':
@@ -112,9 +115,14 @@ export default class Compost {
       case 'delete_and_new':
         await handler.deleteAndNewComment(body);
         break;
+      case 'latest':
+        comment = await handler.latestComment();
+        break;
       default:
         // This should never happen
         throw new Error(`Unknown behavior: ${behavior}`);
     }
+
+    return comment;
   }
 }

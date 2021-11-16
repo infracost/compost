@@ -1,6 +1,7 @@
 import { flags } from '@oclif/command';
 import Compost from '../..';
 import { GitHubOptions } from '../../platforms/github';
+import { stripMarkdownHeader } from '../../util';
 import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
@@ -32,7 +33,11 @@ export default class GitHubCommand extends BaseCommand {
   async run() {
     const { args, flags } = this.parse(GitHubCommand);
 
-    const body = this.loadBody(flags);
+    let body: string;
+
+    if (args.behavior !== 'latest') {
+      body = this.loadBody(flags);
+    }
 
     const { project, targetType, targetRef, behavior } =
       this.loadBaseArgs(args);
@@ -43,8 +48,8 @@ export default class GitHubCommand extends BaseCommand {
       apiUrl: flags['github-api-url'],
     };
 
-    const comments = new Compost(opts);
-    await comments.postComment(
+    const compost = new Compost(opts);
+    const comment = await compost.postComment(
       'github',
       project,
       targetType,
@@ -52,5 +57,9 @@ export default class GitHubCommand extends BaseCommand {
       behavior,
       body
     );
+
+    if (comment) {
+      process.stdout.write(`${stripMarkdownHeader(comment.body)}\n`);
+    }
   }
 }

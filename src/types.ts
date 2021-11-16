@@ -11,7 +11,12 @@ export type TargetType = 'pr' | 'mr' | 'commit';
 // Pull/merge request number or commit SHA
 export type TargetReference = string | number;
 
-export type Behavior = 'update' | 'new' | 'hide_and_new' | 'delete_and_new';
+export type Behavior =
+  | 'update'
+  | 'new'
+  | 'hide_and_new'
+  | 'delete_and_new'
+  | 'latest';
 
 export type DetectorOptions = {
   targetTypes: TargetType[];
@@ -32,6 +37,13 @@ export interface Detector {
   detect(): DetectResult;
 }
 
+export interface Comment {
+  body: string;
+  ref(): string;
+  isHidden(): boolean;
+  sortKey(): string;
+}
+
 export type CommentHandlerOptions = {
   tag?: string;
   logger?: Logger;
@@ -43,4 +55,5 @@ export interface CommentHandler {
   newComment(body: string): Promise<void>;
   hideAndNewComment(body: string): Promise<void>;
   deleteAndNewComment(body: string): Promise<void>;
+  latestComment(): Promise<Comment>;
 }

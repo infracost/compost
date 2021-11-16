@@ -3,6 +3,7 @@
 import { IssueComment, Repository } from '@octokit/graphql-schema';
 import { Octokit } from 'octokit';
 import { retry } from '@octokit/plugin-retry';
+import { stripMarkdownTag } from '../../util';
 
 const readmeContents =
   'This repo is automatically created by the [compost](https://github.com/infracost/compost) E2E tests';
@@ -215,15 +216,11 @@ export async function getPullRequestComments(
   }
 
   if (!keepMarkdownHeader) {
-    comments = stripMarkdownHeader(comments);
+    comments = comments.map((c) => ({
+      ...c,
+      body: stripMarkdownTag(c.body),
+    }));
   }
 
   return comments;
-}
-
-export function stripMarkdownHeader(comments: IssueComment[]): IssueComment[] {
-  return comments.map((c) => ({
-    ...c,
-    body: c.body.replace(/^(\[\/\/\]:.*\n)/, ''),
-  }));
 }

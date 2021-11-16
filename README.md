@@ -50,6 +50,12 @@ Hide the previous posted comments and post a new comment (**Note:** Currently on
 compost autodetect hide_and_new --body="my new comment"
 ```
 
+Get the latest comment that was posted by compost
+
+```sh
+compost autodetect latest
+```
+
 Post a comment to a specific GitHub pull request:
 
 ```sh

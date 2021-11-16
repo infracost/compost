@@ -50,7 +50,7 @@ export default class AutoDetect extends BaseCommand {
       flags['target-type'] as TargetType[]
     );
     if (!detectResult) {
-      this.error('Unable to detect current environment');
+      this.errorHandler('Unable to detect current environment');
     }
 
     const { platform, project, targetType, targetRef } = detectResult;

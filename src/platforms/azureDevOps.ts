@@ -1,6 +1,6 @@
 import axios from 'axios';
-import BaseCommentHandler, { Comment } from './base';
-import { CommentHandlerOptions, DetectResult } from '../types';
+import BaseCommentHandler from './base';
+import { CommentHandlerOptions, Comment, DetectResult } from '../types';
 
 const patTokenLength = 52;
 

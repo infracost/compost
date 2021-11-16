@@ -1,7 +1,9 @@
 import fs from 'fs';
 import { Command, flags } from '@oclif/command';
 import { args, OutputArgs, OutputFlags } from '@oclif/parser';
-import { Logger } from '../util';
+import { format, inspect } from 'util';
+import { IConfig } from '@oclif/config';
+import { ErrorHandler, Logger } from '../util';
 import {
   CommentHandlerOptions,
   TargetType,
@@ -10,6 +12,16 @@ import {
 } from '../types';
 
 export default abstract class BaseCommand extends Command {
+  protected logger: Logger;
+
+  protected errorHandler: ErrorHandler;
+
+  constructor(argv: string[], config: IConfig) {
+    super(argv, config);
+    this.logger = this.wrapLogger();
+    this.errorHandler = this.error;
+  }
+
   static flags = {
     help: flags.help({ char: 'h', description: 'Show help' }),
 
@@ -47,44 +59,49 @@ export default abstract class BaseCommand extends Command {
     },
     {
       name: 'behavior',
-      description: 'Behavior when posting the comment',
+      description: 'Behavior when posting or retrieving a comment',
       required: true,
-      options: ['update', 'new', 'hide_and_new', 'delete_and_new'],
+      options: ['update', 'new', 'hide_and_new', 'delete_and_new', 'latest'],
     },
   ];
 
   private wrapLogger(): Logger {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     return {
-      debug: (...args: any[]) => this.debug(args), // eslint-disable-line @typescript-eslint/no-explicit-any
-      info: (message: string, ...args: any[]) => this.log(message, ...args), // eslint-disable-line @typescript-eslint/no-explicit-any
+      debug: (...args: any[]) => this.debug(args),
+      // Overwrite info to use stderr instead of stdout
+      info(message = '', ...args: any[]): void {
+        // eslint-disable-next-line no-param-reassign
+        message = typeof message === 'string' ? message : inspect(message);
+        process.stderr.write(`${format(message, ...args)}\n`);
+      },
       warn: (message: string) => this.warn(message),
     };
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
   loadBody(flags: OutputFlags<typeof BaseCommand.flags>): string {
-    let { body } = flags;
-
-    if (body) {
-      return body;
+    if (flags.body) {
+      return flags.body;
     }
 
     const bodyFile = flags['body-file'];
 
+    if (!bodyFile) {
+      this.errorHandler('body or body-file is required');
+    }
+
     if (!fs.existsSync(bodyFile)) {
-      this.error(`body-file ${bodyFile} does not exist`);
+      this.errorHandler(`body-file ${bodyFile} does not exist`);
     }
 
     try {
-      body = fs.readFileSync(bodyFile, 'utf8');
+      return fs.readFileSync(bodyFile, 'utf8');
     } catch (err) {
-      this.error(`Error reading body-file: ${err}`);
+      this.errorHandler(`Error reading body-file: ${err}`);
     }
 
-    if (!body) {
-      this.error('body or body-file is required');
-    }
-
-    return body;
+    return '';
   }
 
   loadBaseOptions(
@@ -92,8 +109,8 @@ export default abstract class BaseCommand extends Command {
   ): CommentHandlerOptions {
     return {
       tag: flags.tag,
-      logger: this.wrapLogger(),
-      errorHandler: this.error,
+      logger: this.logger,
+      errorHandler: this.errorHandler,
     };
   }
 
@@ -112,7 +129,7 @@ export default abstract class BaseCommand extends Command {
     if (targetType === 'pr' || targetType === 'mr') {
       targetRef = parseInt(targetRef as string, 10);
       if (Number.isNaN(targetRef)) {
-        this.error(`target_ref must be a number`);
+        this.errorHandler(`target_ref must be a number`);
       }
     }
 

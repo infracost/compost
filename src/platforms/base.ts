@@ -1,15 +1,8 @@
 import chalk from 'chalk';
-import { CommentHandler, CommentHandlerOptions } from '../types';
-import { defaultErrorHandler, ErrorHandler, Logger, NullLogger } from '../util';
+import { Comment, CommentHandler, CommentHandlerOptions } from '../types';
+import { addMarkdownTag, defaultErrorHandler, ErrorHandler, Logger, markdownTag, NullLogger } from '../util';
 
 export const defaultTag = 'compost-comment';
-
-export interface Comment {
-  body: string;
-  ref(): string;
-  isHidden(): boolean;
-  sortKey(): string;
-}
 
 export default abstract class BaseCommentHandler<C extends Comment>
   implements CommentHandler
@@ -26,9 +19,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
     this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
   }
 
-  async updateComment(body: string): Promise<void> {
-    const bodyWithTag = markdownComment(body, this.tag);
-
+  async latestComment(): Promise<C | null> {
     this.logger.info(`Finding matching comments for tag \`${this.tag}\``);
     const matchingComments = await this.callFindMatchingComments(
       markdownTag(this.tag)
@@ -39,9 +30,17 @@ export default abstract class BaseCommentHandler<C extends Comment>
       }`
     );
 
-    const latestMatchingComment = matchingComments.sort((a, b) =>
-      b.sortKey().localeCompare(a.sortKey())
-    )[0];
+    return (
+      matchingComments.sort((a, b) =>
+        b.sortKey().localeCompare(a.sortKey())
+      )[0] ?? null
+    );
+  }
+
+  async updateComment(body: string): Promise<void> {
+    const bodyWithTag = addMarkdownTag(body, this.tag);
+
+    const latestMatchingComment = await this.latestComment();
 
     if (latestMatchingComment) {
       if (bodyWithTag === latestMatchingComment.body) {
@@ -67,7 +66,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
   }
 
   async newComment(body: string): Promise<void> {
-    const bodyWithTag = markdownComment(body, this.tag);
+    const bodyWithTag = addMarkdownTag(body, this.tag);
 
     this.logger.info('Creating new comment');
     const comment = await this.callCreateComment(bodyWithTag);
@@ -75,7 +74,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
   }
 
   async hideAndNewComment(body: string): Promise<void> {
-    const bodyWithTag = markdownComment(body, this.tag);
+    const bodyWithTag = addMarkdownTag(body, this.tag);
 
     this.logger.info(`Finding matching comments for tag \`${this.tag}\``);
     const matchingComments = await this.callFindMatchingComments(
@@ -95,7 +94,7 @@ export default abstract class BaseCommentHandler<C extends Comment>
   }
 
   async deleteAndNewComment(body: string): Promise<void> {
-    const bodyWithTag = markdownComment(body, this.tag);
+    const bodyWithTag = addMarkdownTag(body, this.tag);
 
     this.logger.info(`Finding matching comments for tag \`${this.tag}\``);
     const matchingComments = await this.callFindMatchingComments(
@@ -176,17 +175,4 @@ export default abstract class BaseCommentHandler<C extends Comment>
   abstract callHideComment(comment: C): Promise<void>;
 
   abstract callDeleteComment(comment: C): Promise<void>;
-}
-
-export function markdownTag(s: string) {
-  return `[//]: <> (${s})`;
-}
-
-function markdownComment(s: string, tag?: string) {
-  let comment = s;
-  if (tag) {
-    comment = `${markdownTag(tag)}\n${comment}`;
-  }
-
-  return comment;
 }

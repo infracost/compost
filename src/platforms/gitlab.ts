@@ -1,6 +1,6 @@
 import axios from 'axios';
-import BaseCommentHandler, { Comment } from './base';
-import { CommentHandlerOptions, DetectResult } from '../types';
+import BaseCommentHandler from './base';
+import { CommentHandlerOptions, Comment, DetectResult } from '../types';
 
 export type GitLabOptions = CommentHandlerOptions & {
   token: string;
@@ -230,7 +230,6 @@ export class GitLabMrHandler extends GitLabHandler {
     await this.newComment(body);
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async callHideComment() {
     // Shouldn't get here
     this.errorHandler('Not implemented');
