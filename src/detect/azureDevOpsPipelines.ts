@@ -6,47 +6,33 @@ import { DetectError } from '.';
 
 export class AzureDevOpsPipelinesDetector extends BaseDetector {
   detect(): AzureDevOpsDetectResult | GitHubDetectResult {
-    this.logger.debug('Checking for GitHub Actions');
-
-    this.checkEnvVarValue('GITHUB_ACTIONS', 'true');
-    const token = this.checkEnvVarExists('GITHUB_TOKEN');
-    const apiUrl = this.checkEnvVarExists('GITHUB_API_URL');
-    const project = this.checkEnvVarExists('GITHUB_REPOSITORY');
-
-    let targetType: TargetType;
-    let targetRef: TargetReference;
-
-    if (this.supportsTargetType('pr')) {
-      if (process.env.GITHUB_PULL_REQUEST_NUMBER) {
-        targetType = 'pr';
-        targetRef = Number.parseInt(process.env.GITHUB_PULL_REQUEST_NUMBER, 10);
-        if (Number.isNaN(targetRef)) {
-          throw new DetectError(
-            `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
-          );
-        }
+    try {
+      const result = this.detectAzureDevOps();
+      if (result) {
+        return result;
+      }
+    } catch (err) {
+      if (err.name === DetectError.name) {
+        this.logger.debug(err.message);
+      } else {
+        throw err;
       }
     }
 
-    if (!targetRef && this.supportsTargetType('commit')) {
-      targetType = 'commit';
-      targetRef = this.checkEnvVarExists('GITHUB_COMMIT_SHA');
+    try {
+      const result = this.detectGitHub();
+      if (result) {
+        return result;
+      }
+    } catch (err) {
+      if (err.name === DetectError.name) {
+        this.logger.debug(err.message);
+      } else {
+        throw err;
+      }
     }
 
-    if (!targetRef) {
-      return null;
-    }
-
-    return {
-      platform: 'github',
-      project,
-      targetType,
-      targetRef,
-      opts: {
-        token,
-        apiUrl,
-      },
-    };
+    return null;
   }
 
   detectAzureDevOps(): AzureDevOpsDetectResult {
