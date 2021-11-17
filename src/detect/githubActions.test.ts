@@ -58,7 +58,7 @@ describe('GitHubActionsDetector', () => {
       let logs = '';
 
       const appendToLogs = (m: string) => {
-        logs += `${m  }\n`;
+        logs += `${m}\n`;
       };
       jest.spyOn(logger, 'debug').mockImplementation(appendToLogs);
       jest.spyOn(logger, 'info').mockImplementation(appendToLogs);

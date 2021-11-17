@@ -1,8 +1,8 @@
 import GitHubCommand from '../cli/commands/github';
-import { captureOutput } from './helpers/cli';
+import { captureOutput, OutputMock, suppressOutput } from './helpers/cli';
 import GitHubHelper, { loadGitHubTestEnv } from './helpers/github';
 
-describe('github pr', () => {
+describe('GitHub PR', () => {
   jest.setTimeout(30_000);
 
   let token: string;
@@ -10,8 +10,8 @@ describe('github pr', () => {
   let gh: GitHubHelper;
   let branch: string;
   let prNumber: number;
-  let stdout: string;
-  let stderr: string;
+  let out: OutputMock;
+  let args: string[];
 
   beforeAll(async () => {
     const env = loadGitHubTestEnv();
@@ -22,6 +22,17 @@ describe('github pr', () => {
     await gh.createRepoIfNotExists();
     branch = await gh.createBranch();
     prNumber = await gh.createPullRequest(branch);
+
+    args = [`${repo}`, 'pr', `${prNumber}`, `--github-token=${token}`];
+
+    // Add non-matching existing comment
+    suppressOutput();
+    await GitHubCommand.run([
+      ...args,
+      'new',
+      '--body=existing',
+      '--tag=existing',
+    ]);
   });
 
   afterAll(async () => {
@@ -30,24 +41,50 @@ describe('github pr', () => {
   });
 
   beforeEach(() => {
-    captureOutput(stdout, stderr);
+    out = new OutputMock();
+    captureOutput(out);
   });
 
-  afterEach(jest.restoreAllMocks);
+  afterEach(jest.clearAllMocks);
+  afterAll(jest.restoreAllMocks);
 
-  test('example test', async () => {
-    const args = [`${repo}`, 'pr', `${prNumber}`, `--github-token=${token}`];
-
+  test('new', async () => {
     await GitHubCommand.run([...args, 'new', '--body=test 1']);
-    await GitHubCommand.run([...args, 'new', '--body=test 2']);
-    await GitHubCommand.run([...args, 'update', '--body=test 3']);
-
-    const comments = await gh.getPullRequestComments(prNumber);
-
-    expect(comments.length).toBe(2);
-    expect(comments).toEqual([
+    expect(await gh.getPullRequestComments(prNumber)).toEqual([
+      { body: 'existing', isMinimized: false },
       { body: 'test 1', isMinimized: false },
+    ]);
+  });
+
+  test('update', async () => {
+    await GitHubCommand.run([...args, 'update', '--body=test 2']);
+    expect(await gh.getPullRequestComments(prNumber)).toEqual([
+      { body: 'existing', isMinimized: false },
+      { body: 'test 2', isMinimized: false },
+    ]);
+  });
+
+  test('hide_and_new', async () => {
+    await GitHubCommand.run([...args, 'hide_and_new', '--body=test 3']);
+    expect(await gh.getPullRequestComments(prNumber)).toEqual([
+      { body: 'existing', isMinimized: false },
+      { body: 'test 2', isMinimized: true },
       { body: 'test 3', isMinimized: false },
     ]);
+  });
+
+  test('delete_and_new', async () => {
+    await GitHubCommand.run([...args, 'delete_and_new', '--body=test 4']);
+    expect(await gh.getPullRequestComments(prNumber)).toEqual([
+      { body: 'existing', isMinimized: false },
+      { body: 'test 4', isMinimized: false },
+    ]);
+  });
+
+  test('latest', async () => {
+    await GitHubCommand.run([...args, 'new', '--body=test 5']);
+    await GitHubCommand.run([...args, 'new', '--body=other', '--tag=other']);
+    await GitHubCommand.run([...args, 'latest']);
+    expect(out.stdout).toEqual('test 5\n');
   });
 });
