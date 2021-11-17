@@ -1,5 +1,5 @@
 import { Octokit } from 'octokit';
-import { Repository } from '@octokit/graphql-schema';
+import { Repository, Commit } from '@octokit/graphql-schema';
 import { retry } from '@octokit/plugin-retry';
 import BaseCommentHandler from './base';
 import { CommentHandlerOptions, Comment, DetectResult } from '../types';
@@ -142,7 +142,6 @@ export class GitHubPrHandler extends GitHubHandler {
       );
       allComments.push(...comments);
     }
-
     const matchingComments = allComments.filter((c) => c.body.includes(tag));
 
     return matchingComments;
@@ -231,28 +230,66 @@ export class GitHubCommitHandler extends GitHubHandler {
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
-    const comments = await this.octokit.paginate(
-      this.octokit.rest.repos.listCommentsForCommit,
-      {
-        owner: this.owner,
-        repo: this.repo,
-        commit_sha: this.commitSha,
-      }
-    );
+    const allComments: GitHubComment[] = [];
 
-    const matchingComments = comments.filter((c) => c.body.includes(tag));
+    let after = null;
+    let hasNextPage = true;
 
-    return matchingComments.map(
-      (c) =>
-        new GitHubComment(
-          c.node_id,
-          c.id,
-          c.body,
-          c.created_at,
-          c.html_url,
-          false
-        )
-    );
+    while (hasNextPage) {
+      const data = await this.octokit.graphql<{ repository?: Repository }>(
+        `
+        query($repo: String! $owner: String! $commitSha: GitObjectID! $after: String) {
+          repository(name: $repo owner: $owner) {
+            object(oid: $commitSha) {
+              ... on Commit {
+                comments(first: 100 after: $after) {
+                  nodes {
+                    id
+                    databaseId
+                    url
+                    createdAt
+                    publishedAt
+                    body
+                    isMinimized
+                  }
+                  pageInfo {
+                    endCursor
+                    hasNextPage
+                  }
+                }
+              }
+            }
+          }
+        }`,
+        {
+          owner: this.owner,
+          repo: this.repo,
+          commitSha: this.commitSha,
+          after,
+        }
+      );
+
+      const commit = data.repository?.object as Commit | undefined;
+      after = commit?.comments.pageInfo.endCursor;
+      hasNextPage = commit?.comments.pageInfo.hasNextPage;
+
+      const comments = (commit?.comments.nodes || []).map(
+        (c) =>
+          new GitHubComment(
+            c.id,
+            c.databaseId,
+            c.body,
+            c.publishedAt ?? c.createdAt,
+            c.url,
+            c.isMinimized
+          )
+      );
+      allComments.push(...comments);
+    }
+
+    const matchingComments = allComments.filter((c) => c.body.includes(tag));
+
+    return matchingComments;
   }
 
   async callCreateComment(body: string): Promise<GitHubComment> {

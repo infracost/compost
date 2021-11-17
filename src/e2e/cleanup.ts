@@ -12,7 +12,7 @@ async function cleanup() {
 
   console.log(`Cleaning up repo ${repo}`);
 
-  await gh.closeAllPullRequests();
+  await gh.closeAllPrs();
 
   await gh.deleteAllBranches();
 
