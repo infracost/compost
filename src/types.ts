@@ -18,7 +18,7 @@ export type GetBehavior = 'latest';
 export type Behavior = PostBehavior | GetBehavior;
 
 export type DetectorOptions = {
-  targetTypes: TargetType[];
+  targetTypes?: TargetType[];
   logger?: Logger;
 };
 
