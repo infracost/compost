@@ -1,6 +1,10 @@
 {
   "name": "@infracost/compost",
   "version": "0.0.1",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "bugs": {
     "url": "https://github.com/infracost/compost/issues"
   },
