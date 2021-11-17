@@ -1,8 +1,6 @@
 # Compost
 
-**WIP**
-
-Compost (WIP name) is for tools that run in CI pipelines and want to post results as pull request/commit comments.
+Compost is for tools that run in CI pipelines and want to post results as pull request/commit comments.
 
 It currently detects the following CI environments:
 * GitHub Actions
