@@ -1,6 +1,11 @@
 /* eslint-disable no-console */
 
-import { IssueComment, Repository } from '@octokit/graphql-schema';
+import {
+  Commit,
+  CommitComment,
+  IssueComment,
+  Repository,
+} from '@octokit/graphql-schema';
 import { Octokit } from 'octokit';
 import { retry } from '@octokit/plugin-retry';
 import { stripMarkdownTag } from '../../util';
@@ -93,12 +98,12 @@ export default class GitHubHelper {
     });
   }
 
-  async createBranch(): Promise<string> {
+  async createBranch(): Promise<[string, string]> {
     const branch = generateRandomBranchName();
 
     console.log(`Getting latest commit SHA`);
 
-    const commitSha = (
+    const masterCommitSha = (
       await this.octokit.rest.repos.listCommits({
         owner: this.owner,
         repo: this.repo,
@@ -113,12 +118,12 @@ export default class GitHubHelper {
       owner: this.owner,
       repo: this.repo,
       ref: `refs/heads/${branch}`,
-      sha: commitSha,
+      sha: masterCommitSha,
     });
 
     console.log(`Creating a new file on branch ${branch}`);
 
-    await this.octokit.rest.repos.createOrUpdateFileContents({
+    const resp = await this.octokit.rest.repos.createOrUpdateFileContents({
       owner: this.owner,
       repo: this.repo,
       path: 'new_file.txt',
@@ -127,10 +132,12 @@ export default class GitHubHelper {
       branch,
     });
 
-    return branch;
+    const commitSha = resp.data.commit.sha;
+
+    return [branch, commitSha];
   }
 
-  async createPullRequest(branch: string): Promise<number> {
+  async createPr(branch: string): Promise<number> {
     console.log(`Creating a new PR for branch ${branch}`);
 
     const resp = await this.octokit.rest.pulls.create({
@@ -144,7 +151,7 @@ export default class GitHubHelper {
     return resp.data.number;
   }
 
-  async getPullRequestComments(
+  async getPrComments(
     prNumber: number,
     keepMarkdownHeader?: boolean
   ): Promise<IssueComment[]> {
@@ -201,7 +208,67 @@ export default class GitHubHelper {
     return comments;
   }
 
-  async closePullRequest(prNumber: number): Promise<void> {
+  async getCommitComments(
+    commitSha: string,
+    keepMarkdownHeader?: boolean
+  ): Promise<CommitComment[]> {
+    // Use the GraphQL api here so we can see if they're minimized
+    let after = null;
+    let hasNextPage = true;
+    let comments: CommitComment[] = [];
+
+    console.log(
+      `Fetching commit comments for ${this.owner}/${this.repo} commit ${commitSha}`
+    );
+
+    while (hasNextPage) {
+      const data = await this.octokit.graphql<{ repository?: Repository }>(
+        `
+        query($repo: String! $owner: String! $commitSha: GitObjectID! $after: String) {
+          repository(name: $repo owner: $owner) {
+            object(oid: $commitSha) {
+              ... on Commit {
+                comments(first: 100 after: $after) {
+                  nodes {
+                    body
+                    isMinimized
+                  }
+                  pageInfo {
+                    endCursor
+                    hasNextPage
+                  }
+                }
+              }
+            }
+          }
+        }
+        `,
+        {
+          owner: this.owner,
+          repo: this.repo,
+          commitSha,
+          after,
+        }
+      );
+
+      const commit = data.repository?.object as Commit | undefined;
+      after = commit?.comments.pageInfo.endCursor;
+      hasNextPage = commit?.comments.pageInfo.hasNextPage;
+
+      comments.push(...(commit?.comments.nodes || []));
+    }
+
+    if (!keepMarkdownHeader) {
+      comments = comments.map((c) => ({
+        ...c,
+        body: stripMarkdownTag(c.body),
+      }));
+    }
+
+    return comments;
+  }
+
+  async closePr(prNumber: number): Promise<void> {
     console.log(`Closing PR ${prNumber}`);
 
     await this.octokit.rest.pulls.update({
@@ -224,7 +291,7 @@ export default class GitHubHelper {
     });
   }
 
-  async closeAllPullRequests(): Promise<void> {
+  async closeAllPrs(): Promise<void> {
     console.log(`Closing all test pull requests`);
 
     const data = await this.octokit.paginate(this.octokit.rest.pulls.list, {
