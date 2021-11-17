@@ -2,7 +2,7 @@
 
 Compost is for tools that run in CI pipelines and want to post results as pull request/commit comments.
 
-<img src=".github/assets/screenshot.png" alt="Compost screenshot" width=600 />
+<img src=".github/assets/screenshot.png" alt="Compost screenshot" width=800 />
 
 It currently detects the following CI environments:
 * GitHub Actions
