@@ -1,13 +1,26 @@
-/* eslint-disable no-param-reassign */
+export class OutputMock {
+  public stdout = '';
 
-export function captureOutput(stdout: string, stderr: string): void {
+  public stderr = '';
+
+  constructor() {}
+}
+
+export function suppressOutput(): void {
+  jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+  jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+}
+
+/* eslint-disable no-param-reassign */
+export function captureOutput(out: OutputMock): void {
   jest.spyOn(process.stdout, 'write').mockImplementation((v) => {
-    stdout += v; // eslint-disable-line @typescript-eslint/no-unused-vars
+    out.stdout += v.toString();
     return true;
   });
 
   jest.spyOn(process.stderr, 'write').mockImplementation((v) => {
-    stderr += v; // eslint-disable-line @typescript-eslint/no-unused-vars
+    out.stderr += v;
     return true;
   });
 }
+/* eslint-enable no-param-reassign */
