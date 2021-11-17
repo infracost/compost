@@ -2,6 +2,8 @@
 
 Compost is for tools that run in CI pipelines and want to post results as pull request/commit comments.
 
+<img src=".github/assets/screenshot.png" alt="Compost screenshot" width=600 />
+
 It currently detects the following CI environments:
 * GitHub Actions
 * GitLab CI (merge requests only)
@@ -17,9 +19,7 @@ Coming soon:
 ## Install
 
 ```sh
-git clone git@github.com:infracost/compost.git
-npm install
-npm link
+npm install -g @infracost/compost
 ```
 
 ## Examples
