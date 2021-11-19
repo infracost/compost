@@ -29,7 +29,7 @@ export class GitHubActionsDetector extends BaseDetector {
 
     if (!targetRef && this.supportsTargetType('commit')) {
       targetType = 'commit';
-      targetRef = this.checkEnvVarExists('GITHUB_COMMIT_SHA');
+      targetRef = this.checkEnvVarExists('GITHUB_SHA');
     }
 
     if (!targetRef) {

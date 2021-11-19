@@ -40,7 +40,7 @@ describe('GitHubActionsDetector', () => {
       process.env.GITHUB_TOKEN = 'MY_TOKEN_VALUE';
       process.env.GITHUB_REPOSITORY = 'infracost/compost-example';
       process.env.GITHUB_PULL_REQUEST_NUMBER = '4';
-      process.env.GITHUB_COMMIT_SHA = 'aaaaaaa';
+      process.env.GITHUB_SHA = 'aaaaaaa';
     });
 
     afterEach(() => {
@@ -68,7 +68,7 @@ describe('GitHubActionsDetector', () => {
       expect(logs).not.toContain('MY_TOKEN_VALUE');
     });
 
-    it('detects GitHub PR if $GITHUB_PULL_REQUEST_NUMBER and $GITHUB_COMMIT_SHA are set', () => {
+    it('detects GitHub PR if $GITHUB_PULL_REQUEST_NUMBER and $GITHUB_SHA are set', () => {
       process.env.GITHUB_PULL_REQUEST_NUMBER = '4';
       expect(detector.detect()).toEqual(expectedPrResult);
     });
@@ -78,7 +78,7 @@ describe('GitHubActionsDetector', () => {
       expect(detector.detect()).toEqual(expectedCommitResult);
     });
 
-    it('detects GitHub commit if only $GITHUB_COMMIT_SHA is set', () => {
+    it('detects GitHub commit if only $GITHUB_SHA is set', () => {
       process.env.GITHUB_PULL_REQUEST_NUMBER = undefined;
       expect(detector.detect()).toEqual(expectedCommitResult);
     });
@@ -90,9 +90,9 @@ describe('GitHubActionsDetector', () => {
       );
     });
 
-    it('does not detect if neither $GITHUB_PULL_REQUEST_NUMBER or $GITHUB_COMMIT_SHA are set', () => {
+    it('does not detect if neither $GITHUB_PULL_REQUEST_NUMBER or $GITHUB_SHA are set', () => {
       process.env.GITHUB_PULL_REQUEST_NUMBER = undefined;
-      process.env.GITHUB_COMMIT_SHA = undefined;
+      process.env.GITHUB_SHA = undefined;
       expect(() => detector.detect()).toThrow(DetectError);
     });
 
