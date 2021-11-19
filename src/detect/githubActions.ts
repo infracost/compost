@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import { TargetReference, TargetType } from '../types';
 import { GitHubDetectResult } from '../platforms/github';
 import { BaseDetector } from './base';
@@ -16,20 +17,25 @@ export class GitHubActionsDetector extends BaseDetector {
     let targetRef: TargetReference;
 
     if (this.supportsTargetType('pr')) {
-      if (process.env.GITHUB_PULL_REQUEST_NUMBER) {
-        targetType = 'pr';
-        targetRef = Number.parseInt(process.env.GITHUB_PULL_REQUEST_NUMBER, 10);
-        if (Number.isNaN(targetRef)) {
-          throw new DetectError(
-            `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
-          );
+      if (process.env.GITHUB_EVENT_PATH) {
+        const eventJson = fs.readFileSync(process.env.GITHUB_EVENT_PATH);
+        const eventData = JSON.parse(eventJson.toString());
+
+        targetRef = eventData?.pull_request?.number;
+        if (targetRef) {
+          targetType = 'pr';
+          if (Number.isNaN(targetRef)) {
+            throw new DetectError(
+              `GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number`
+            );
+          }
         }
       }
     }
 
     if (!targetRef && this.supportsTargetType('commit')) {
       targetType = 'commit';
-      targetRef = this.checkEnvVarExists('GITHUB_COMMIT_SHA');
+      targetRef = this.checkEnvVarExists('GITHUB_SHA');
     }
 
     if (!targetRef) {
