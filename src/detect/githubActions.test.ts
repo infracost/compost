@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { DetectError } from '.';
 import { Logger, NullLogger } from '../util';
 import { GitHubActionsDetector } from './githubActions';
@@ -39,7 +40,11 @@ describe('GitHubActionsDetector', () => {
       process.env.GITHUB_API_URL = 'https://api.customgithub.com';
       process.env.GITHUB_TOKEN = 'MY_TOKEN_VALUE';
       process.env.GITHUB_REPOSITORY = 'infracost/compost-example';
-      process.env.GITHUB_PULL_REQUEST_NUMBER = '4';
+      process.env.GITHUB_EVENT_PATH = path.join(
+        __dirname,
+        'testdata',
+        'pull_request_event.json'
+      );
       process.env.GITHUB_SHA = 'aaaaaaa';
     });
 
@@ -53,8 +58,6 @@ describe('GitHubActionsDetector', () => {
     });
 
     it('does not log the $GITHUB_TOKEN value', () => {
-      process.env.GITHUB_PULL_REQUEST_NUMBER = '4';
-
       let logs = '';
 
       const appendToLogs = (m: string) => {
@@ -69,7 +72,6 @@ describe('GitHubActionsDetector', () => {
     });
 
     it('detects GitHub PR if $GITHUB_PULL_REQUEST_NUMBER and $GITHUB_SHA are set', () => {
-      process.env.GITHUB_PULL_REQUEST_NUMBER = '4';
       expect(detector.detect()).toEqual(expectedPrResult);
     });
 
@@ -79,19 +81,12 @@ describe('GitHubActionsDetector', () => {
     });
 
     it('detects GitHub commit if only $GITHUB_SHA is set', () => {
-      process.env.GITHUB_PULL_REQUEST_NUMBER = undefined;
+      process.env.GITHUB_EVENT_PATH = undefined;
       expect(detector.detect()).toEqual(expectedCommitResult);
     });
 
-    it('does not detect if $GITHUB_PULL_REQUEST_NUMBER is not a number', () => {
-      process.env.GITHUB_PULL_REQUEST_NUMBER = 'a';
-      expect(() => detector.detect()).toThrow(
-        'GITHUB_PULL_REQUEST_NUMBER environment variable is not a valid number'
-      );
-    });
-
     it('does not detect if neither $GITHUB_PULL_REQUEST_NUMBER or $GITHUB_SHA are set', () => {
-      process.env.GITHUB_PULL_REQUEST_NUMBER = undefined;
+      process.env.GITHUB_EVENT_PATH = undefined;
       process.env.GITHUB_SHA = undefined;
       expect(() => detector.detect()).toThrow(DetectError);
     });
