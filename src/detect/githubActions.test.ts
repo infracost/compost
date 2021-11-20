@@ -13,26 +13,31 @@ describe('GitHubActionsDetector', () => {
   });
 
   describe('detect', () => {
-    const expectedPrResult = {
+    const expectedResult = {
       platform: 'github',
       project: 'infracost/compost-example',
-      targetType: 'pr',
-      targetRef: 4,
       opts: {
         token: 'MY_TOKEN_VALUE',
         apiUrl: 'https://api.customgithub.com',
       },
     };
 
-    const expectedCommitResult = {
-      platform: 'github',
-      project: 'infracost/compost-example',
+    const expectedPrResult = {
+      ...expectedResult,
+      targetType: 'pr',
+      targetRef: 2,
+    };
+
+    const expectedPrCommitResult = {
+      ...expectedResult,
       targetType: 'commit',
-      targetRef: 'aaaaaaa',
-      opts: {
-        token: 'MY_TOKEN_VALUE',
-        apiUrl: 'https://api.customgithub.com',
-      },
+      targetRef: 'ec26c3e57ca3a959ca5aad62de7213c562f8c821',
+    };
+
+    const expectedNonPrCommitResult = {
+      ...expectedResult,
+      targetType: 'commit',
+      targetRef: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     };
 
     beforeEach(() => {
@@ -45,7 +50,7 @@ describe('GitHubActionsDetector', () => {
         'testdata',
         'pull_request_event.json'
       );
-      process.env.GITHUB_SHA = 'aaaaaaa';
+      process.env.GITHUB_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     });
 
     afterEach(() => {
@@ -71,21 +76,21 @@ describe('GitHubActionsDetector', () => {
       expect(logs).not.toContain('MY_TOKEN_VALUE');
     });
 
-    it('detects GitHub PR if $GITHUB_PULL_REQUEST_NUMBER and $GITHUB_SHA are set', () => {
+    it('detects GitHub PR if $GITHUB_EVENT_PATH pull_request.number and $GITHUB_SHA are set', () => {
       expect(detector.detect()).toEqual(expectedPrResult);
     });
 
-    it('detects GitHub commit if targetTypes is set to commit', () => {
+    it('detects GitHub PR commit if targetTypes is set to commit', () => {
       detector = new GitHubActionsDetector({ targetTypes: ['commit'] });
-      expect(detector.detect()).toEqual(expectedCommitResult);
+      expect(detector.detect()).toEqual(expectedPrCommitResult);
     });
 
     it('detects GitHub commit if only $GITHUB_SHA is set', () => {
       process.env.GITHUB_EVENT_PATH = undefined;
-      expect(detector.detect()).toEqual(expectedCommitResult);
+      expect(detector.detect()).toEqual(expectedNonPrCommitResult);
     });
 
-    it('does not detect if neither $GITHUB_PULL_REQUEST_NUMBER or $GITHUB_SHA are set', () => {
+    it('does not detect if neither $GITHUB_EVENT_PATH or $GITHUB_SHA are set', () => {
       process.env.GITHUB_EVENT_PATH = undefined;
       process.env.GITHUB_SHA = undefined;
       expect(() => detector.detect()).toThrow(DetectError);
