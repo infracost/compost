@@ -39,13 +39,13 @@ compost autodetect new --body="my new comment"
 Delete the previous posted comments and post a new comment:
 
 ```sh
-compost autodetect delete_and_new --body="my new comment"
+compost autodetect delete-and-new --body="my new comment"
 ```
 
 Hide the previous posted comments and post a new comment (**Note:** Currently only supported for GitHub):
 
 ```sh
-compost autodetect hide_and_new --body="my new comment"
+compost autodetect hide-and-new --body="my new comment"
 ```
 
 Get the latest comment that was posted by compost
