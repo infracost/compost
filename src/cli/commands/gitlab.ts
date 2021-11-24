@@ -27,7 +27,6 @@ export default class GitLabCommand extends BaseCommand {
       args[0],
       {
         ...args[1],
-        options: ['mr', 'commit'],
         description: 'Whether to post on a merge request or commit',
       },
       {

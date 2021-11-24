@@ -23,10 +23,13 @@ export class GitHubActionsDetector extends BaseDetector {
       event = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
     }
 
-    if (this.supportsTargetType('pr')) {
+    if (
+      this.supportsTargetType('pull-request') ||
+      this.supportsTargetType('merge-request')
+    ) {
       targetRef = event?.pull_request?.number;
       if (targetRef) {
-        targetType = 'pr';
+        targetType = 'pull-request';
         if (Number.isNaN(targetRef)) {
           throw new DetectError(
             `GITHUB_EVENT_PATH pull_request.number is not a valid number`

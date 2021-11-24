@@ -22,7 +22,7 @@ describe('GitHubActionsDetector', () => {
 
     const expectedPrResult = {
       ...expectedResult,
-      targetType: 'pr',
+      targetType: 'pull-request',
       targetRef: 2,
     };
 

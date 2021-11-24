@@ -30,7 +30,17 @@ export default class AutoDetectCommand extends BaseCommand {
     'target-type': flags.string({
       multiple: true,
       description: 'Limit the auto-detection to pull/merge requests or commits',
-      options: ['pr', 'mr', 'commit'],
+      options: ['pull-request', 'merge-request', 'pr', 'mr', 'commit'],
+      parse(val: string): string[] {
+        switch (val) {
+          case 'pr':
+            return ['pull-request'];
+          case 'mr':
+            return ['merge-request'];
+          default:
+            return [val];
+        }
+      },
     }),
   };
 

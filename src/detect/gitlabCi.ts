@@ -15,9 +15,12 @@ export class GitLabCiDetector extends BaseDetector {
     let targetType: TargetType;
     let targetRef: TargetReference;
 
-    if (this.supportsTargetType('mr') || this.supportsTargetType('pr')) {
+    if (
+      this.supportsTargetType('pull-request') ||
+      this.supportsTargetType('merge-request')
+    ) {
       if (process.env.CI_MERGE_REQUEST_IID) {
-        targetType = 'mr';
+        targetType = 'merge-request';
         targetRef = Number.parseInt(process.env.CI_MERGE_REQUEST_IID, 10);
         if (Number.isNaN(targetRef)) {
           throw new DetectError(
