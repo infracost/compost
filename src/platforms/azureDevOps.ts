@@ -11,7 +11,7 @@ import { BaseCommentHandler, BasePlatform } from './base';
 const patTokenLength = 52;
 
 export type AzureDevOpsDetectResult = DetectResult & {
-  azureDevOpsToken: string;
+  token: string;
 };
 
 class AzureDevOpsComment implements Comment {
@@ -43,7 +43,7 @@ export class AzureDevOps extends BasePlatform {
     project: string,
     targetType: TargetType,
     targetRef: TargetReference,
-    azureDevOpsToken?: string,
+    token?: string,
     opts?: CommentHandlerOptions
   ) {
     super(opts);
@@ -54,7 +54,7 @@ export class AzureDevOps extends BasePlatform {
       this.handler = new AzureDevOpsPrHandler(
         project,
         targetRef as number,
-        azureDevOpsToken,
+        token,
         opts
       );
     }
@@ -72,15 +72,15 @@ abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment>
 
   constructor(
     protected project: string,
-    protected azureDevOpsToken?: string,
+    protected token?: string,
     opts?: CommentHandlerOptions
   ) {
     super(opts);
 
-    this.azureDevOpsToken ||= process.env.AZURE_DEVOPS_EXT_PAT;
-    if (!this.azureDevOpsToken) {
+    this.token ||= process.env.AZURE_DEVOPS_EXT_PAT;
+    if (!this.token) {
       this.errorHandler(
-        'Azure DevOps azureDevOpsToken was not specified or could not be detected'
+        'Azure DevOps token was not specified or could not be detected'
       );
     }
 
@@ -109,11 +109,11 @@ abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment>
   }
 
   protected authHeaders() {
-    let val = `Bearer ${this.azureDevOpsToken}`;
+    let val = `Bearer ${this.token}`;
 
-    const isPat = this.azureDevOpsToken.length === patTokenLength;
+    const isPat = this.token.length === patTokenLength;
     if (isPat) {
-      val = `Basic ${Buffer.from(`:${this.azureDevOpsToken}`).toString(
+      val = `Basic ${Buffer.from(`:${this.token}`).toString(
         'base64'
       )}`;
     }
@@ -128,10 +128,10 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
   constructor(
     project: string,
     private prNumber: number,
-    azureDevOpsToken?: string,
+    token?: string,
     opts?: CommentHandlerOptions
   ) {
-    super(project, azureDevOpsToken, opts);
+    super(project, token, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<AzureDevOpsComment[]> {

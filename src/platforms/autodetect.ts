@@ -43,8 +43,8 @@ export function autodetect(opts?: AutoDetectOptions): Platform | null | never {
         project,
         targetType,
         targetRef,
-        (detectResult as GitHubDetectResult).githubToken,
-        (detectResult as GitHubDetectResult).githubApiUrl,
+        (detectResult as GitHubDetectResult).token,
+        (detectResult as GitHubDetectResult).apiUrl,
         opts
       );
     case 'gitlab':
@@ -52,8 +52,8 @@ export function autodetect(opts?: AutoDetectOptions): Platform | null | never {
         project,
         targetType,
         targetRef,
-        (detectResult as GitLabDetectResult).gitlabToken,
-        (detectResult as GitLabDetectResult).gitlabServerUrl,
+        (detectResult as GitLabDetectResult).token,
+        (detectResult as GitLabDetectResult).serverUrl,
         opts
       );
     case 'azure-devops':
@@ -61,7 +61,7 @@ export function autodetect(opts?: AutoDetectOptions): Platform | null | never {
         project,
         targetType,
         targetRef,
-        (detectResult as AzureDevOpsDetectResult).azureDevOpsToken,
+        (detectResult as AzureDevOpsDetectResult).token,
         opts
       );
       break;
