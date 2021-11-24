@@ -1,7 +1,6 @@
 import { flags } from '@oclif/parser';
 import { AutoDetect } from '../../platforms/autodetect';
 import { Behavior, TargetType } from '../../types';
-import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
 export default class AutoDetectCommand extends BaseCommand {
@@ -55,7 +54,7 @@ export default class AutoDetectCommand extends BaseCommand {
     if (behavior === 'latest') {
       const comment = await c.getComment(behavior);
       if (comment) {
-        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+        process.stdout.write(`${comment.body}\n`);
       }
     } else {
       await c.postComment(behavior, body);

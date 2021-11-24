@@ -1,7 +1,6 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
 import { GitLab } from '../../platforms/gitlab';
-import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
 export default class GitLabCommand extends BaseCommand {
@@ -67,7 +66,7 @@ export default class GitLabCommand extends BaseCommand {
     if (behavior === 'latest') {
       const comment = await c.getComment(behavior);
       if (comment) {
-        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+        process.stdout.write(`${comment.body}\n`);
       }
     } else {
       await c.postComment(behavior, body);

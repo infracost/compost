@@ -1,6 +1,5 @@
 import { flags } from '@oclif/command';
 import { GitHub } from '../../platforms/github';
-import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
@@ -55,7 +54,7 @@ export default class GitHubCommand extends BaseCommand {
     if (behavior === 'latest') {
       const comment = await c.getComment(behavior);
       if (comment) {
-        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+        process.stdout.write(`${comment.body}\n`);
       }
     } else {
       await c.postComment(behavior, body);
