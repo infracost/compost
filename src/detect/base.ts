@@ -3,21 +3,19 @@ import { DetectorOptions, DetectResult, TargetType } from '../types';
 import { Logger, NullLogger } from '../util';
 
 export abstract class BaseDetector {
-  protected targetTypes?: TargetType[];
+  protected targetType?: TargetType;
 
   protected logger: Logger;
 
   constructor(opts?: DetectorOptions) {
-    this.targetTypes = opts?.targetTypes;
+    this.targetType = opts?.targetType;
     this.logger = opts?.logger ?? new NullLogger();
   }
 
   abstract detect(): DetectResult | null;
 
-  protected supportsTargetType(targetType: TargetType): boolean {
-    return (
-      this.targetTypes === undefined || this.targetTypes.includes(targetType)
-    );
+  protected shouldDetectTargetType(targetType: TargetType): boolean {
+    return !this.targetType || this.targetType === targetType;
   }
 
   private static sanitizeValue(value: string, isSecret?: boolean): string {

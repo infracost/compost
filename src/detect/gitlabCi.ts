@@ -16,8 +16,8 @@ export class GitLabCiDetector extends BaseDetector {
     let targetRef: TargetReference;
 
     if (
-      this.supportsTargetType('pull-request') ||
-      this.supportsTargetType('merge-request')
+      this.shouldDetectTargetType('pull-request') ||
+      this.shouldDetectTargetType('merge-request')
     ) {
       if (process.env.CI_MERGE_REQUEST_IID) {
         targetType = 'merge-request';
