@@ -44,13 +44,13 @@ export default class AzureDevOpsCommand extends BaseCommand {
       body = this.loadBody(flags);
     }
 
-    const azureDevOpsToken = flags['azure-devops-token'];
+    const token = flags['azure-devops-token'];
 
     const c = new AzureDevOps(
       project,
       targetType,
       targetRef,
-      azureDevOpsToken,
+      token,
       this.loadBaseOptions(flags)
     );
 

@@ -39,15 +39,15 @@ export default class GitHubCommand extends BaseCommand {
       body = this.loadBody(flags);
     }
 
-    const githubToken = flags['github-token'];
-    const githubApiUrl = flags['github-api-url'];
+    const token = flags['github-token'];
+    const apiUrl = flags['github-api-url'];
 
     const c = new GitHub(
       project,
       targetType,
       targetRef,
-      githubToken,
-      githubApiUrl,
+      token,
+      apiUrl,
       this.loadBaseOptions(flags)
     );
 

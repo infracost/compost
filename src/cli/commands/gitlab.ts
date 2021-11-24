@@ -50,15 +50,15 @@ export default class GitLabCommand extends BaseCommand {
       body = this.loadBody(flags);
     }
 
-    const gitlabToken = flags['github-token'];
-    const gitlabServerUrl = flags['github-api-url'];
+    const token = flags['github-token'];
+    const serverUrl = flags['github-api-url'];
 
     const c = new GitLab(
       project,
       targetType,
       targetRef,
-      gitlabToken,
-      gitlabServerUrl,
+      token,
+      serverUrl,
       this.loadBaseOptions(flags)
     );
 

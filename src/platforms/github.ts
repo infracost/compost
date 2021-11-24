@@ -13,8 +13,8 @@ import { BaseCommentHandler, BasePlatform } from './base';
 const OctokitWithRetries = Octokit.plugin(retry);
 
 export type GitHubDetectResult = DetectResult & {
-  githubToken: string;
-  githubApiUrl?: string;
+  token: string;
+  apiUrl?: string;
 };
 
 class GitHubComment implements Comment {
@@ -48,8 +48,8 @@ export class GitHub extends BasePlatform {
     project: string,
     targetType: TargetType,
     targetRef: TargetReference,
-    githubToken?: string,
-    githubApiUrl?: string,
+    token?: string,
+    apiUrl?: string,
     opts?: CommentHandlerOptions
   ) {
     super(opts);
@@ -58,16 +58,16 @@ export class GitHub extends BasePlatform {
       this.handler = new GitHubCommitHandler(
         project,
         targetRef as string,
-        githubToken,
-        githubApiUrl,
+        token,
+        apiUrl,
         opts
       );
     } else {
       this.handler = new GitHubPrHandler(
         project,
         targetRef as number,
-        githubToken,
-        githubApiUrl,
+        token,
+        apiUrl,
         opts
       );
     }
@@ -87,26 +87,26 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
 
   constructor(
     protected project: string,
-    private githubToken?: string,
-    private githubApiUrl?: string,
+    private token?: string,
+    private apiUrl?: string,
     protected opts?: CommentHandlerOptions
   ) {
     super(opts);
 
-    this.githubToken ||= process.env.GITHUB_TOKEN;
-    if (!this.githubToken) {
+    this.token ||= process.env.GITHUB_TOKEN;
+    if (!this.token) {
       this.errorHandler(
         'GitHub token was not specified or could not be detected'
       );
       return;
     }
 
-    this.githubApiUrl ||=
+    this.apiUrl ||=
       process.env.GITHUB_API_URL || 'https://api.github.com';
 
     this.octokit = new OctokitWithRetries({
-      auth: this.githubToken,
-      baseUrl: this.githubApiUrl,
+      auth: this.token,
+      baseUrl: this.apiUrl,
     });
 
     const projectParts = project.split('/', 2);
@@ -125,11 +125,11 @@ export class GitHubPrHandler extends GitHubHandler {
   constructor(
     project: string,
     private prNumber: number,
-    githubToken?: string,
-    githubApiUrl?: string,
+    token?: string,
+    apiUrl?: string,
     opts?: CommentHandlerOptions
   ) {
-    super(project, githubToken, githubApiUrl, opts);
+    super(project, token, apiUrl, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
@@ -269,11 +269,11 @@ export class GitHubCommitHandler extends GitHubHandler {
   constructor(
     project: string,
     private commitSha: string,
-    githubToken?: string,
-    githubApiUrl?: string,
+    token?: string,
+    apiUrl?: string,
     opts?: CommentHandlerOptions
   ) {
-    super(project, githubToken, githubApiUrl, opts);
+    super(project, token, apiUrl, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {

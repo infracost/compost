@@ -16,8 +16,8 @@ describe('GitHubActionsDetector', () => {
     const expectedResult = {
       platform: 'github',
       project: 'infracost/compost-example',
-      githubToken: 'MY_TOKEN_VALUE',
-      githubApiUrl: 'https://api.customgithub.com',
+      token: 'MY_TOKEN_VALUE',
+      apiUrl: 'https://api.customgithub.com',
     };
 
     const expectedPrResult = {

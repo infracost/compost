@@ -39,7 +39,7 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     this.logger.debug('Checking for Azure DevOps Pipelines');
 
     this.checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit');
-    const azureDevOpsToken = this.checkEnvVarExists(
+    const token = this.checkEnvVarExists(
       process.env.SYSTEM_ACCESSTOKEN,
       true
     );
@@ -75,7 +75,7 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
       project: repo,
       targetType,
       targetRef,
-      azureDevOpsToken,
+      token,
     };
   }
 
@@ -83,9 +83,9 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     this.logger.debug('Checking for Azure DevOps Pipelines (GitHub)');
 
     this.checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub');
-    const githubToken = this.checkEnvVarExists('GITHUB_TOKEN', true);
+    const token = this.checkEnvVarExists('GITHUB_TOKEN', true);
     const repo = this.checkEnvVarExists('BUILD_REPOSITORY_NAME');
-    const githubApiUrl = process.env.GITHUB_API_URL;
+    const apiUrl = process.env.GITHUB_API_URL;
 
     let targetType: TargetType;
     let targetRef: TargetReference;
@@ -117,8 +117,8 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
       project: repo,
       targetType,
       targetRef,
-      githubToken,
-      githubApiUrl,
+      token,
+      apiUrl,
     };
   }
 }

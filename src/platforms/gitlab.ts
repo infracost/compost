@@ -9,8 +9,8 @@ import {
 import { BaseCommentHandler, BasePlatform } from './base';
 
 export type GitLabDetectResult = DetectResult & {
-  gitlabToken: string;
-  gitlabServerUrl: string;
+  token: string;
+  serverUrl: string;
 };
 
 class GitLabComment implements Comment {
@@ -42,8 +42,8 @@ export class GitLab extends BasePlatform {
     project: string,
     targetType: TargetType,
     targetRef: TargetReference,
-    gitlabToken?: string,
-    gitlabServerUrl?: string,
+    token?: string,
+    serverUrl?: string,
     opts?: CommentHandlerOptions
   ) {
     super(opts);
@@ -54,8 +54,8 @@ export class GitLab extends BasePlatform {
       this.handler = new GitLabMrHandler(
         project,
         targetRef as number,
-        gitlabToken,
-        gitlabServerUrl,
+        token,
+        serverUrl,
         opts
       );
     }
@@ -69,21 +69,21 @@ export class GitLab extends BasePlatform {
 abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
   constructor(
     protected project: string,
-    protected gitlabToken?: string,
-    protected gitlabServerUrl?: string,
+    protected token?: string,
+    protected serverUrl?: string,
     opts?: CommentHandlerOptions
   ) {
     super(opts);
 
-    this.gitlabToken ||= process.env.GITLAB_TOKEN;
-    if (!this.gitlabToken) {
+    this.token ||= process.env.GITLAB_TOKEN;
+    if (!this.token) {
       this.errorHandler(
-        'GitLab gitlabToken was not specified or could not be detected'
+        'GitLab token was not specified or could not be detected'
       );
       return;
     }
 
-    this.gitlabServerUrl ||= process.env.CI_SERVER_URL || 'https://gitlab.com';
+    this.serverUrl ||= process.env.CI_SERVER_URL || 'https://gitlab.com';
   }
 }
 
@@ -91,11 +91,11 @@ export class GitLabMrHandler extends GitLabHandler {
   constructor(
     project: string,
     private mrNumber: number,
-    gitlabToken?: string,
+    token?: string,
     gitlabApiUrl?: string,
     opts?: CommentHandlerOptions
   ) {
-    super(project, gitlabToken, gitlabApiUrl, opts);
+    super(project, token, gitlabApiUrl, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {
@@ -152,9 +152,9 @@ export class GitLabMrHandler extends GitLabHandler {
           };
         };
       }>(
-        `${this.gitlabServerUrl}/api/graphql`,
+        `${this.serverUrl}/api/graphql`,
         { query, variables },
-        { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
+        { headers: { Authorization: `Bearer ${this.token}` } }
       );
 
       if (resp.data.errors) {
@@ -187,14 +187,14 @@ export class GitLabMrHandler extends GitLabHandler {
       body: string;
       created_at: string;
     }>(
-      `${this.gitlabServerUrl}/api/v4/projects/${encodeURIComponent(
+      `${this.serverUrl}/api/v4/projects/${encodeURIComponent(
         this.project
       )}/merge_requests/${this.mrNumber}/notes`,
       { body },
-      { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
+      { headers: { Authorization: `Bearer ${this.token}` } }
     );
 
-    const url = `${this.gitlabServerUrl}/${this.project}/-/merge_requests/${this.mrNumber}#note_${resp.data.id}`;
+    const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mrNumber}#note_${resp.data.id}`;
 
     return new GitLabComment(
       resp.data.id,
@@ -222,9 +222,9 @@ export class GitLabMrHandler extends GitLabHandler {
     const resp = await axios.post<{
       errors: object[];
     }>(
-      `${this.gitlabServerUrl}/api/graphql`,
+      `${this.serverUrl}/api/graphql`,
       { query, variables },
-      { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
+      { headers: { Authorization: `Bearer ${this.token}` } }
     );
 
     if (resp.data.errors) {
@@ -251,9 +251,9 @@ export class GitLabMrHandler extends GitLabHandler {
     const resp = await axios.post<{
       errors: object[];
     }>(
-      `${this.gitlabServerUrl}/api/graphql`,
+      `${this.serverUrl}/api/graphql`,
       { query, variables },
-      { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
+      { headers: { Authorization: `Bearer ${this.token}` } }
     );
 
     if (resp.data.errors) {
