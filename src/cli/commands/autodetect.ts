@@ -1,9 +1,10 @@
 import { flags } from '@oclif/parser';
-import Compost from '../..';
-import { Behavior, Platform, TargetType } from '../../types';
+import { AutoDetect } from '../../platforms/autodetect';
+import { Behavior, TargetType } from '../../types';
+import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
-export default class AutoDetect extends BaseCommand {
+export default class AutoDetectCommand extends BaseCommand {
   static description =
     'Auto-detect the CI environment and post a comment to a pull/merge request or commit';
 
@@ -38,31 +39,26 @@ export default class AutoDetect extends BaseCommand {
   static args = BaseCommand.args.slice(3);
 
   async run() {
-    const { args, flags } = this.parse(AutoDetect);
+    const { args, flags } = this.parse(AutoDetectCommand);
 
-    const body = this.loadBody(flags);
+    const behavior = args.behavior as Behavior;
 
-    const opts = this.loadBaseOptions(flags);
-
-    const compost = new Compost(opts);
-
-    const detectResult = compost.detectEnvironment(
-      flags['target-type'] as TargetType[]
-    );
-    if (!detectResult) {
-      this.errorHandler('Unable to detect current environment');
+    let body: string;
+    if (behavior !== 'latest') {
+      body = this.loadBody(flags);
     }
 
-    const { platform, project, targetType, targetRef } = detectResult;
+    const targetTypes = flags['target-type'] as TargetType[];
 
-    await BaseCommand.runCompost(
-      compost,
-      platform as Platform,
-      project,
-      targetType,
-      targetRef,
-      args.behavior as Behavior,
-      body
-    );
+    const c = new AutoDetect(targetTypes, this.loadBaseOptions(flags));
+
+    if (behavior === 'latest') {
+      const comment = await c.getComment(behavior);
+      if (comment) {
+        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+      }
+    } else {
+      await c.postComment(behavior, body);
+    }
   }
 }

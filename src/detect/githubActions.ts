@@ -9,9 +9,9 @@ export class GitHubActionsDetector extends BaseDetector {
     this.logger.debug('Checking for GitHub Actions');
 
     this.checkEnvVarValue('GITHUB_ACTIONS', 'true');
-    const token = this.checkEnvVarExists('GITHUB_TOKEN', true);
+    const githubToken = this.checkEnvVarExists('GITHUB_TOKEN', true);
     const project = this.checkEnvVarExists('GITHUB_REPOSITORY');
-    const apiUrl = process.env.GITHUB_API_URL;
+    const githubApiUrl = process.env.GITHUB_API_URL;
 
     let targetType: TargetType;
     let targetRef: TargetReference;
@@ -55,10 +55,8 @@ export class GitHubActionsDetector extends BaseDetector {
       project,
       targetType,
       targetRef,
-      opts: {
-        token,
-        apiUrl,
-      },
+      githubToken,
+      githubApiUrl,
     };
   }
 }

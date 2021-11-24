@@ -1,18 +1,20 @@
 import { Octokit } from 'octokit';
 import { Repository, Commit } from '@octokit/graphql-schema';
 import { retry } from '@octokit/plugin-retry';
-import BaseCommentHandler from './base';
-import { CommentHandlerOptions, Comment, DetectResult } from '../types';
+import {
+  CommentHandlerOptions,
+  Comment,
+  DetectResult,
+  TargetReference,
+  TargetType,
+} from '../types';
+import { BaseCommentHandler, BasePlatform } from './base';
 
 const OctokitWithRetries = Octokit.plugin(retry);
 
-export type GitHubOptions = CommentHandlerOptions & {
-  token: string;
-  apiUrl?: string;
-};
-
 export type GitHubDetectResult = DetectResult & {
-  opts: GitHubOptions;
+  githubToken: string;
+  githubApiUrl?: string;
 };
 
 class GitHubComment implements Comment {
@@ -39,20 +41,73 @@ class GitHubComment implements Comment {
   }
 }
 
+export class GitHub extends BasePlatform {
+  private handler: GitHubHandler;
+
+  constructor(
+    project: string,
+    targetType: TargetType,
+    targetRef: TargetReference,
+    githubToken?: string,
+    githubApiUrl?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(opts);
+
+    if (targetType === 'commit') {
+      this.handler = new GitHubCommitHandler(
+        project,
+        targetRef as string,
+        githubToken,
+        githubApiUrl,
+        opts
+      );
+    } else {
+      this.handler = new GitHubPrHandler(
+        project,
+        targetRef as number,
+        githubToken,
+        githubApiUrl,
+        opts
+      );
+    }
+  }
+
+  getHandler(): GitHubHandler {
+    return this.handler;
+  }
+}
+
 abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
-  protected token: string;
-
-  protected apiUrl: string;
-
   protected owner: string;
 
   protected repo: string;
 
   protected octokit: Octokit;
 
-  constructor(protected project: string, opts?: GitHubOptions) {
-    super(opts as CommentHandlerOptions);
-    this.processOpts(opts);
+  constructor(
+    protected project: string,
+    private githubToken?: string,
+    private githubApiUrl?: string,
+    protected opts?: CommentHandlerOptions
+  ) {
+    super(opts);
+
+    this.githubToken ||= process.env.GITHUB_TOKEN;
+    if (!this.githubToken) {
+      this.errorHandler(
+        'GitHub token was not specified or could not be detected'
+      );
+      return;
+    }
+
+    this.githubApiUrl ||=
+      process.env.GITHUB_API_URL || 'https://api.github.com';
+
+    this.octokit = new OctokitWithRetries({
+      auth: this.githubToken,
+      baseUrl: this.githubApiUrl,
+    });
 
     const projectParts = project.split('/', 2);
     if (projectParts.length !== 2) {
@@ -64,27 +119,17 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
 
     [this.owner, this.repo] = projectParts;
   }
-
-  private processOpts(opts?: GitHubOptions): void {
-    this.token = opts?.token || process.env.GITHUB_TOKEN;
-    if (!this.token) {
-      this.errorHandler('--github-token or GITHUB_TOKEN is required');
-      return;
-    }
-
-    this.apiUrl =
-      opts?.apiUrl || process.env.GITHUB_API_URL || 'https://api.github.com';
-
-    this.octokit = new OctokitWithRetries({
-      auth: this.token,
-      baseUrl: this.apiUrl,
-    });
-  }
 }
 
 export class GitHubPrHandler extends GitHubHandler {
-  constructor(project: string, private prNumber: number, opts?: GitHubOptions) {
-    super(project, opts as GitHubOptions);
+  constructor(
+    project: string,
+    private prNumber: number,
+    githubToken?: string,
+    githubApiUrl?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(project, githubToken, githubApiUrl, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {
@@ -224,9 +269,11 @@ export class GitHubCommitHandler extends GitHubHandler {
   constructor(
     project: string,
     private commitSha: string,
-    opts?: GitHubOptions
+    githubToken?: string,
+    githubApiUrl?: string,
+    opts?: CommentHandlerOptions
   ) {
-    super(project, opts as GitHubOptions);
+    super(project, githubToken, githubApiUrl, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<GitHubComment[]> {

@@ -1,5 +1,13 @@
 import chalk from 'chalk';
-import { Comment, CommentHandler, CommentHandlerOptions } from '../types';
+import {
+  Comment,
+  CommentHandler,
+  CommentHandlerOptions,
+  GetBehavior,
+  Platform,
+  PlatformOptions,
+  PostBehavior,
+} from '../types';
 import {
   addMarkdownTag,
   defaultErrorHandler,
@@ -11,7 +19,60 @@ import {
 
 export const defaultTag = 'compost-comment';
 
-export default abstract class BaseCommentHandler<C extends Comment>
+export abstract class BasePlatform implements Platform {
+  protected logger: Logger;
+
+  protected errorHandler: ErrorHandler;
+
+  constructor(opts?: PlatformOptions) {
+    this.logger = opts?.logger ?? new NullLogger();
+    this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
+  }
+
+  abstract getHandler(): CommentHandler | never;
+
+  async getComment(behavior: GetBehavior): Promise<Comment | null> {
+    const handler = this.getHandler();
+
+    let comment: Comment | null = null;
+
+    switch (behavior) {
+      case 'latest':
+        comment = await handler.latestComment();
+        break;
+      default:
+        // This should never happen
+        this.errorHandler(`Unknown behavior: ${behavior}`);
+    }
+
+    return comment;
+  }
+
+  // Post a comment to the pull/merge request or commit
+  async postComment(behavior: PostBehavior, body: string): Promise<void> {
+    const handler = this.getHandler();
+
+    switch (behavior) {
+      case 'update':
+        await handler.updateComment(body);
+        break;
+      case 'new':
+        await handler.newComment(body);
+        break;
+      case 'hide_and_new':
+        await handler.hideAndNewComment(body);
+        break;
+      case 'delete_and_new':
+        await handler.deleteAndNewComment(body);
+        break;
+      default:
+        // This should never happen
+        this.errorHandler(`Unknown behavior: ${behavior}`);
+    }
+  }
+}
+
+export abstract class BaseCommentHandler<C extends Comment>
   implements CommentHandler
 {
   protected tag: string;

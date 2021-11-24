@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
-import Compost from '../..';
-import { AzureDevOpsOptions } from '../../platforms/azureDevOps';
+import { AzureDevOps } from '../../platforms/azureDevOps';
+import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
 export default class AzureDevOpsCommand extends BaseCommand {
@@ -37,25 +37,31 @@ export default class AzureDevOpsCommand extends BaseCommand {
   async run() {
     const { args, flags } = this.parse(AzureDevOpsCommand);
 
-    const body = this.loadBody(flags);
-
     const { project, targetType, targetRef, behavior } =
       this.loadBaseArgs(args);
 
-    const opts: AzureDevOpsOptions = {
-      ...this.loadBaseOptions(flags),
-      token: flags['azure-devops-token'],
-    };
+    let body: string;
+    if (behavior !== 'latest') {
+      body = this.loadBody(flags);
+    }
 
-    const compost = new Compost(opts);
-    await BaseCommand.runCompost(
-      compost,
-      'azure-devops',
+    const azureDevOpsToken = flags['azure-devops-token'];
+
+    const c = new AzureDevOps(
       project,
       targetType,
       targetRef,
-      behavior,
-      body
+      azureDevOpsToken,
+      this.loadBaseOptions(flags)
     );
+
+    if (behavior === 'latest') {
+      const comment = await c.getComment(behavior);
+      if (comment) {
+        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+      }
+    } else {
+      await c.postComment(behavior, body);
+    }
   }
 }
