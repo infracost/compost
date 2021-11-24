@@ -51,13 +51,6 @@ export default class GitHubCommand extends BaseCommand {
       this.loadBaseOptions(flags)
     );
 
-    if (behavior === 'latest') {
-      const comment = await c.getComment(behavior);
-      if (comment) {
-        process.stdout.write(`${comment.body}\n`);
-      }
-    } else {
-      await c.postComment(behavior, body);
-    }
+    await BaseCommand.handleComment(c, behavior, body);
   }
 }

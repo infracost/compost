@@ -50,6 +50,8 @@ export type PlatformOptions = {
 
 export interface Platform {
   getHandler(): CommentHandler | never;
+  getComment(behavior: GetBehavior): Promise<Comment | null>;
+  postComment(behavior: PostBehavior, body: string): Promise<void>;
 }
 
 export type CommentHandlerOptions = PlatformOptions & {

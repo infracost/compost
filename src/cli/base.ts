@@ -9,6 +9,7 @@ import {
   TargetType,
   TargetReference,
   Behavior,
+  Platform,
 } from '../types';
 
 export default abstract class BaseCommand extends Command {
@@ -149,5 +150,20 @@ export default abstract class BaseCommand extends Command {
       targetRef,
       behavior,
     };
+  }
+
+  protected static async handleComment(
+    platform: Platform,
+    behavior: Behavior,
+    body: string
+  ): Promise<void> {
+    if (behavior === 'latest') {
+      const comment = await platform.getComment(behavior);
+      if (comment) {
+        process.stdout.write(`${comment.body}\n`);
+      }
+    } else {
+      await platform.postComment(behavior, body);
+    }
   }
 }
