@@ -1,5 +1,5 @@
 import { DetectError } from '../detect';
-import { detectorRegistry } from '../registry';
+import { detectorRegistry } from '../detect/registry';
 import {
   CommentHandler,
   TargetType,

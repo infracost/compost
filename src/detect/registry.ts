@@ -1,7 +1,7 @@
-import { Detector, DetectorOptions } from './types';
-import { GitHubActionsDetector } from './detect/githubActions';
-import { GitLabCiDetector } from './detect/gitlabCi';
-import { AzureDevOpsPipelinesDetector } from './detect/azureDevOpsPipelines';
+import { Detector, DetectorOptions } from '../types';
+import { GitHubActionsDetector } from './githubActions';
+import { GitLabCiDetector } from './gitlabCi';
+import { AzureDevOpsPipelinesDetector } from './azureDevOpsPipelines';
 
 type DetectorConfig = {
   displayName: string;
