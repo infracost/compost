@@ -1,5 +1,5 @@
 import { flags } from '@oclif/parser';
-import { AutoDetect } from '../../platforms/autodetect';
+import { autodetect } from '../../platforms/autodetect';
 import { Behavior, TargetType } from '../../types';
 import BaseCommand from '../base';
 
@@ -28,17 +28,16 @@ export default class AutoDetectCommand extends BaseCommand {
   static flags = {
     ...BaseCommand.flags,
     'target-type': flags.string({
-      multiple: true,
       description: 'Limit the auto-detection to pull/merge requests or commits',
       options: ['pull-request', 'merge-request', 'pr', 'mr', 'commit'],
-      parse(val: string): string[] {
+      parse(val: string): string {
         switch (val) {
           case 'pr':
-            return ['pull-request'];
+            return 'pull-request';
           case 'mr':
-            return ['merge-request'];
+            return 'merge-request';
           default:
-            return [val];
+            return val;
         }
       },
     }),
@@ -57,9 +56,12 @@ export default class AutoDetectCommand extends BaseCommand {
       body = this.loadBody(flags);
     }
 
-    const targetTypes = flags['target-type'] as TargetType[];
+    const targetType = flags['target-type'] as TargetType;
 
-    const c = new AutoDetect(targetTypes, this.loadBaseOptions(flags));
+    const c = autodetect({
+      targetType,
+      ...this.loadBaseOptions(flags),
+    });
 
     await BaseCommand.handleComment(c, behavior, body);
   }

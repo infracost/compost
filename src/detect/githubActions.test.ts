@@ -79,7 +79,7 @@ describe('GitHubActionsDetector', () => {
     });
 
     it('detects GitHub PR commit if targetTypes is set to commit', () => {
-      detector = new GitHubActionsDetector({ targetTypes: ['commit'] });
+      detector = new GitHubActionsDetector({ targetType: 'commit' });
       expect(detector.detect()).toEqual(expectedPrCommitResult);
     });
 

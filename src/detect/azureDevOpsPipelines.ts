@@ -49,8 +49,8 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     let targetRef: TargetReference;
 
     if (
-      this.supportsTargetType('pull-request') ||
-      this.supportsTargetType('merge-request')
+      this.shouldDetectTargetType('pull-request') ||
+      this.shouldDetectTargetType('merge-request')
     ) {
       if (process.env.SYSTEM_PULLREQUEST_PULLREQUESTID) {
         targetType = 'pull-request';
@@ -91,8 +91,8 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     let targetRef: TargetReference;
 
     if (
-      this.supportsTargetType('pull-request') ||
-      this.supportsTargetType('merge-request')
+      this.shouldDetectTargetType('pull-request') ||
+      this.shouldDetectTargetType('merge-request')
     ) {
       if (process.env.SYSTEM_PULLREQUEST_PULLREQUESTNUMBER) {
         targetType = 'pull-request';

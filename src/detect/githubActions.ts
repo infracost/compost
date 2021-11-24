@@ -24,8 +24,8 @@ export class GitHubActionsDetector extends BaseDetector {
     }
 
     if (
-      this.supportsTargetType('pull-request') ||
-      this.supportsTargetType('merge-request')
+      this.shouldDetectTargetType('pull-request') ||
+      this.shouldDetectTargetType('merge-request')
     ) {
       targetRef = event?.pull_request?.number;
       if (targetRef) {
@@ -38,7 +38,7 @@ export class GitHubActionsDetector extends BaseDetector {
       }
     }
 
-    if (!targetRef && this.supportsTargetType('commit')) {
+    if (!targetRef && this.shouldDetectTargetType('commit')) {
       targetType = 'commit';
 
       // If the event is a pull request, use the head commit SHA
