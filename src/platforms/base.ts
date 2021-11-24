@@ -15,6 +15,7 @@ import {
   Logger,
   markdownTag,
   NullLogger,
+  stripMarkdownTag,
 } from '../util';
 
 export const defaultTag = 'compost-comment';
@@ -44,6 +45,11 @@ export abstract class BasePlatform implements Platform {
         // This should never happen
         this.errorHandler(`Unknown behavior: ${behavior}`);
     }
+
+    comment = {
+      ...comment,
+      body: stripMarkdownTag(comment.body),
+    };
 
     return comment;
   }
