@@ -1,14 +1,16 @@
 import axios from 'axios';
-import BaseCommentHandler from './base';
-import { CommentHandlerOptions, Comment, DetectResult } from '../types';
-
-export type GitLabOptions = CommentHandlerOptions & {
-  token: string;
-  serverUrl: string;
-};
+import {
+  CommentHandlerOptions,
+  Comment,
+  DetectResult,
+  TargetReference,
+  TargetType,
+} from '../types';
+import { BaseCommentHandler, BasePlatform } from './base';
 
 export type GitLabDetectResult = DetectResult & {
-  opts: GitLabOptions;
+  gitlabToken: string;
+  gitlabServerUrl: string;
 };
 
 class GitLabComment implements Comment {
@@ -33,31 +35,67 @@ class GitLabComment implements Comment {
   }
 }
 
-abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
-  protected token: string;
+export class GitLab extends BasePlatform {
+  private handler: GitLabHandler;
 
-  protected serverUrl: string;
+  constructor(
+    project: string,
+    targetType: TargetType,
+    targetRef: TargetReference,
+    gitlabToken?: string,
+    gitlabServerUrl?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(opts);
 
-  constructor(protected project: string, opts?: GitLabOptions) {
-    super(opts as CommentHandlerOptions);
-    this.processOpts(opts);
+    if (targetType === 'commit') {
+      this.errorHandler(`Commit target type is not supported for GitLab yet`);
+    } else {
+      this.handler = new GitLabMrHandler(
+        project,
+        targetRef as number,
+        gitlabToken,
+        gitlabServerUrl,
+        opts
+      );
+    }
   }
 
-  processOpts(opts?: GitLabOptions): void {
-    this.token = opts?.token || process.env.GITLAB_TOKEN;
-    if (!this.token) {
-      this.errorHandler('--gitlab-token or GITLAB_TOKEN is required');
+  getHandler(): GitLabHandler {
+    return this.handler;
+  }
+}
+
+abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
+  constructor(
+    protected project: string,
+    protected gitlabToken?: string,
+    protected gitlabServerUrl?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(opts);
+
+    this.gitlabToken ||= process.env.GITLAB_TOKEN;
+    if (!this.gitlabToken) {
+      this.errorHandler(
+        'GitLab gitlabToken was not specified or could not be detected'
+      );
       return;
     }
 
-    this.serverUrl =
-      opts?.serverUrl || process.env.CI_SERVER_URL || 'https://gitlab.com';
+    this.gitlabServerUrl ||= process.env.CI_SERVER_URL || 'https://gitlab.com';
   }
 }
 
 export class GitLabMrHandler extends GitLabHandler {
-  constructor(project: string, private mrNumber: number, opts?: GitLabOptions) {
-    super(project, opts as GitLabOptions);
+  constructor(
+    project: string,
+    private mrNumber: number,
+    gitlabToken?: string,
+    gitlabApiUrl?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(project, gitlabToken, gitlabApiUrl, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {
@@ -114,9 +152,9 @@ export class GitLabMrHandler extends GitLabHandler {
           };
         };
       }>(
-        `${this.serverUrl}/api/graphql`,
+        `${this.gitlabServerUrl}/api/graphql`,
         { query, variables },
-        { headers: { Authorization: `Bearer ${this.token}` } }
+        { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
       );
 
       if (resp.data.errors) {
@@ -149,14 +187,14 @@ export class GitLabMrHandler extends GitLabHandler {
       body: string;
       created_at: string;
     }>(
-      `${this.serverUrl}/api/v4/projects/${encodeURIComponent(
+      `${this.gitlabServerUrl}/api/v4/projects/${encodeURIComponent(
         this.project
       )}/merge_requests/${this.mrNumber}/notes`,
       { body },
-      { headers: { Authorization: `Bearer ${this.token}` } }
+      { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
     );
 
-    const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mrNumber}#note_${resp.data.id}`;
+    const url = `${this.gitlabServerUrl}/${this.project}/-/merge_requests/${this.mrNumber}#note_${resp.data.id}`;
 
     return new GitLabComment(
       resp.data.id,
@@ -184,9 +222,9 @@ export class GitLabMrHandler extends GitLabHandler {
     const resp = await axios.post<{
       errors: object[];
     }>(
-      `${this.serverUrl}/api/graphql`,
+      `${this.gitlabServerUrl}/api/graphql`,
       { query, variables },
-      { headers: { Authorization: `Bearer ${this.token}` } }
+      { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
     );
 
     if (resp.data.errors) {
@@ -213,9 +251,9 @@ export class GitLabMrHandler extends GitLabHandler {
     const resp = await axios.post<{
       errors: object[];
     }>(
-      `${this.serverUrl}/api/graphql`,
+      `${this.gitlabServerUrl}/api/graphql`,
       { query, variables },
-      { headers: { Authorization: `Bearer ${this.token}` } }
+      { headers: { Authorization: `Bearer ${this.gitlabToken}` } }
     );
 
     if (resp.data.errors) {

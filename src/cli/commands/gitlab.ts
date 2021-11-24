@@ -1,7 +1,7 @@
 import { flags } from '@oclif/command';
 import { args } from '@oclif/parser';
-import Compost from '../..';
-import { GitLabOptions } from '../../platforms/gitlab';
+import { GitLab } from '../../platforms/gitlab';
+import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
 export default class GitLabCommand extends BaseCommand {
@@ -44,26 +44,33 @@ export default class GitLabCommand extends BaseCommand {
   async run() {
     const { args, flags } = this.parse(GitLabCommand);
 
-    const body = this.loadBody(flags);
-
     const { project, targetType, targetRef, behavior } =
       this.loadBaseArgs(args);
 
-    const opts: GitLabOptions = {
-      ...this.loadBaseOptions(flags),
-      token: flags['gitlab-token'],
-      serverUrl: flags['gitlab-server-url'],
-    };
+    let body: string;
+    if (behavior !== 'latest') {
+      body = this.loadBody(flags);
+    }
 
-    const compost = new Compost(opts);
-    await BaseCommand.runCompost(
-      compost,
-      'gitlab',
+    const gitlabToken = flags['github-token'];
+    const gitlabServerUrl = flags['github-api-url'];
+
+    const c = new GitLab(
       project,
       targetType,
       targetRef,
-      behavior,
-      body
+      gitlabToken,
+      gitlabServerUrl,
+      this.loadBaseOptions(flags)
     );
+
+    if (behavior === 'latest') {
+      const comment = await c.getComment(behavior);
+      if (comment) {
+        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+      }
+    } else {
+      await c.postComment(behavior, body);
+    }
   }
 }

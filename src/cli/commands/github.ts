@@ -1,6 +1,6 @@
 import { flags } from '@oclif/command';
-import Compost from '../..';
-import { GitHubOptions } from '../../platforms/github';
+import { GitHub } from '../../platforms/github';
+import { stripMarkdownTag } from '../../util';
 import BaseCommand from '../base';
 
 export default class GitHubCommand extends BaseCommand {
@@ -32,30 +32,33 @@ export default class GitHubCommand extends BaseCommand {
   async run() {
     const { args, flags } = this.parse(GitHubCommand);
 
-    let body: string;
-
-    if (args.behavior !== 'latest') {
-      body = this.loadBody(flags);
-    }
-
     const { project, targetType, targetRef, behavior } =
       this.loadBaseArgs(args);
 
-    const opts: GitHubOptions = {
-      ...this.loadBaseOptions(flags),
-      token: flags['github-token'],
-      apiUrl: flags['github-api-url'],
-    };
+    let body: string;
+    if (behavior !== 'latest') {
+      body = this.loadBody(flags);
+    }
 
-    const compost = new Compost(opts);
-    await BaseCommand.runCompost(
-      compost,
-      'github',
+    const githubToken = flags['github-token'];
+    const githubApiUrl = flags['github-api-url'];
+
+    const c = new GitHub(
       project,
       targetType,
       targetRef,
-      behavior,
-      body
+      githubToken,
+      githubApiUrl,
+      this.loadBaseOptions(flags)
     );
+
+    if (behavior === 'latest') {
+      const comment = await c.getComment(behavior);
+      if (comment) {
+        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
+      }
+    } else {
+      await c.postComment(behavior, body);
+    }
   }
 }

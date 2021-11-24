@@ -1,6 +1,6 @@
 import { ErrorHandler, Logger } from './util';
 
-export type Platform =
+export type PlatformName =
   | 'github'
   | 'gitlab'
   | 'azure-devops'
@@ -24,7 +24,7 @@ export type DetectorOptions = {
 
 export type DetectResult =
   | {
-      platform: Platform;
+      platform: PlatformName;
       project: string;
       targetType: TargetType;
       targetRef: TargetReference;
@@ -43,10 +43,17 @@ export interface Comment {
   sortKey(): string;
 }
 
-export type CommentHandlerOptions = {
-  tag?: string;
+export type PlatformOptions = {
   logger?: Logger;
   errorHandler?: ErrorHandler;
+};
+
+export interface Platform {
+  getHandler(): CommentHandler | never;
+}
+
+export type CommentHandlerOptions = PlatformOptions & {
+  tag?: string;
 };
 
 export interface CommentHandler {

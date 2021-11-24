@@ -1,15 +1,17 @@
 import axios from 'axios';
-import BaseCommentHandler from './base';
-import { CommentHandlerOptions, Comment, DetectResult } from '../types';
+import {
+  CommentHandlerOptions,
+  Comment,
+  DetectResult,
+  TargetReference,
+  TargetType,
+} from '../types';
+import { BaseCommentHandler, BasePlatform } from './base';
 
 const patTokenLength = 52;
 
-export type AzureDevOpsOptions = CommentHandlerOptions & {
-  token: string;
-};
-
 export type AzureDevOpsDetectResult = DetectResult & {
-  opts: AzureDevOpsOptions;
+  azureDevOpsToken: string;
 };
 
 class AzureDevOpsComment implements Comment {
@@ -34,30 +36,58 @@ class AzureDevOpsComment implements Comment {
   }
 }
 
-abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment> {
-  protected token: string;
+export class AzureDevOps extends BasePlatform {
+  private handler: AzureDevOpsHandler;
 
+  constructor(
+    project: string,
+    targetType: TargetType,
+    targetRef: TargetReference,
+    azureDevOpsToken?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(opts);
+
+    if (targetType === 'commit') {
+      this.errorHandler(`Commit target type is not supported by Azure DevOps`);
+    } else {
+      this.handler = new AzureDevOpsPrHandler(
+        project,
+        targetRef as number,
+        azureDevOpsToken,
+        opts
+      );
+    }
+  }
+
+  getHandler(): AzureDevOpsHandler {
+    return this.handler;
+  }
+}
+
+abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment> {
   protected repoUrl: string;
 
   protected repoApiUrl: string;
 
-  constructor(protected project: string, opts?: AzureDevOpsOptions) {
-    super(opts as CommentHandlerOptions);
-    this.processOpts(opts);
+  constructor(
+    protected project: string,
+    protected azureDevOpsToken?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(opts);
+
+    this.azureDevOpsToken ||= process.env.AZURE_DEVOPS_EXT_PAT;
+    if (!this.azureDevOpsToken) {
+      this.errorHandler(
+        'Azure DevOps azureDevOpsToken was not specified or could not be detected'
+      );
+    }
 
     try {
       this.repoApiUrl = AzureDevOpsHandler.parseRepoApiUrl(project);
     } catch (err) {
       this.errorHandler(err.message);
-    }
-  }
-
-  processOpts(opts?: AzureDevOpsOptions): void {
-    this.token = opts?.token || process.env.AZURE_DEVOPS_EXT_PAT;
-    if (!this.token) {
-      this.errorHandler(
-        '--azure-devops-token or AZURE_DEVOPS_EXT_PAT environment variable is required'
-      );
     }
   }
 
@@ -79,11 +109,13 @@ abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment>
   }
 
   protected authHeaders() {
-    let val = `Bearer ${this.token}`;
+    let val = `Bearer ${this.azureDevOpsToken}`;
 
-    const isPat = this.token.length === patTokenLength;
+    const isPat = this.azureDevOpsToken.length === patTokenLength;
     if (isPat) {
-      val = `Basic ${Buffer.from(`:${this.token}`).toString('base64')}`;
+      val = `Basic ${Buffer.from(`:${this.azureDevOpsToken}`).toString(
+        'base64'
+      )}`;
     }
 
     return {
@@ -96,9 +128,10 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
   constructor(
     project: string,
     private prNumber: number,
-    opts?: AzureDevOpsOptions
+    azureDevOpsToken?: string,
+    opts?: CommentHandlerOptions
   ) {
-    super(project, opts as AzureDevOpsOptions);
+    super(project, azureDevOpsToken, opts);
   }
 
   async callFindMatchingComments(tag: string): Promise<AzureDevOpsComment[]> {
