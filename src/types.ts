@@ -6,7 +6,7 @@ export type PlatformName =
   | 'azure-devops'
   | 'azure-devops-github';
 
-export type TargetType = 'pr' | 'mr' | 'commit';
+export type TargetType = 'pull-request' | 'merge-request' | 'commit';
 
 // Pull/merge request number or commit SHA
 export type TargetReference = string | number;

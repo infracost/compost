@@ -3,16 +3,13 @@ import { Command, flags } from '@oclif/command';
 import { args, OutputArgs, OutputFlags } from '@oclif/parser';
 import { format, inspect } from 'util';
 import { IConfig } from '@oclif/config';
-import { ErrorHandler, Logger, stripMarkdownTag } from '../util';
+import { ErrorHandler, Logger } from '../util';
 import {
   CommentHandlerOptions,
   TargetType,
   TargetReference,
   Behavior,
-  Platform,
-  GetBehavior,
 } from '../types';
-import Compost from '..';
 
 export default abstract class BaseCommand extends Command {
   protected logger: Logger;
@@ -53,7 +50,17 @@ export default abstract class BaseCommand extends Command {
       name: 'target_type',
       description: 'Whether to post on a pull request or commit',
       required: true,
-      options: ['pr', 'commit'],
+      options: ['pull-request', 'merge-request', 'pr', 'mr', 'commit'],
+      parse(val: string): string {
+        switch (val) {
+          case 'pr':
+            return 'pull-request';
+          case 'mr':
+            return 'merge-request';
+          default:
+            return val;
+        }
+      },
     },
     {
       name: 'target_ref',
@@ -129,7 +136,7 @@ export default abstract class BaseCommand extends Command {
     const behavior = args.behavior as Behavior;
 
     let targetRef: TargetReference = args.target_ref;
-    if (targetType === 'pr' || targetType === 'mr') {
+    if (targetType === 'pull-request' || targetType === 'merge-request') {
       targetRef = parseInt(targetRef as string, 10);
       if (Number.isNaN(targetRef)) {
         this.errorHandler(`target_ref must be a number`);
