@@ -64,7 +64,7 @@ export default abstract class BaseCommand extends Command {
       name: 'behavior',
       description: 'Behavior when posting or retrieving a comment',
       required: true,
-      options: ['update', 'new', 'hide_and_new', 'delete_and_new', 'latest'],
+      options: ['update', 'new', 'hide-and-new', 'delete-and-new', 'latest'],
     },
   ];
 

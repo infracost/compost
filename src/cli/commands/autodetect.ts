@@ -18,11 +18,11 @@ export default class AutoDetectCommand extends BaseCommand {
 `,
     `• Delete the previous posted comments and post a new comment:
 
-   $ compost autodetect delete_and_new --body="my new comment"
+   $ compost autodetect delete-and-new --body="my new comment"
 `,
     `• Hide the previous posted comments and post a new comment (GitHub only):
 
-   $ compost autodetect hide_and_new --body="my new comment"`,
+   $ compost autodetect hide-and-new --body="my new comment"`,
   ];
 
   static flags = {

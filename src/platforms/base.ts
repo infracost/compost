@@ -65,10 +65,10 @@ export abstract class BasePlatform implements Platform {
       case 'new':
         await handler.newComment(body);
         break;
-      case 'hide_and_new':
+      case 'hide-and-new':
         await handler.hideAndNewComment(body);
         break;
-      case 'delete_and_new':
+      case 'delete-and-new':
         await handler.deleteAndNewComment(body);
         break;
       default:

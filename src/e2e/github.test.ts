@@ -69,8 +69,8 @@ describe('GitHub', () => {
       ]);
     });
 
-    test('hide_and_new', async () => {
-      await GitHubCommand.run([...args, 'hide_and_new', '--body=test 3']);
+    test('hide-and-new', async () => {
+      await GitHubCommand.run([...args, 'hide-and-new', '--body=test 3']);
       expect(await gh.getPrComments(prNumber)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 2', isMinimized: true },
@@ -78,8 +78,8 @@ describe('GitHub', () => {
       ]);
     });
 
-    test('delete_and_new', async () => {
-      await GitHubCommand.run([...args, 'delete_and_new', '--body=test 4']);
+    test('delete-and-new', async () => {
+      await GitHubCommand.run([...args, 'delete-and-new', '--body=test 4']);
       expect(await gh.getPrComments(prNumber)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 4', isMinimized: false },
@@ -123,8 +123,8 @@ describe('GitHub', () => {
       ]);
     });
 
-    test('hide_and_new', async () => {
-      await GitHubCommand.run([...args, 'hide_and_new', '--body=test 3']);
+    test('hide-and-new', async () => {
+      await GitHubCommand.run([...args, 'hide-and-new', '--body=test 3']);
       expect(await gh.getCommitComments(commitSha)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 2', isMinimized: true },
@@ -132,8 +132,8 @@ describe('GitHub', () => {
       ]);
     });
 
-    test('delete_and_new', async () => {
-      await GitHubCommand.run([...args, 'delete_and_new', '--body=test 4']);
+    test('delete-and-new', async () => {
+      await GitHubCommand.run([...args, 'delete-and-new', '--body=test 4']);
       expect(await gh.getCommitComments(commitSha)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 4', isMinimized: false },
