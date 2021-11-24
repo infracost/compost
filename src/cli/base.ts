@@ -143,37 +143,4 @@ export default abstract class BaseCommand extends Command {
       behavior,
     };
   }
-
-  protected static async runCompost(
-    compost: Compost,
-    platform: Platform,
-    project: string,
-    targetType: TargetType,
-    targetRef: TargetReference,
-    behavior: Behavior,
-    body?: string
-  ): Promise<void> {
-    if (behavior === 'latest') {
-      const comment = await compost.getComment(
-        platform,
-        project,
-        targetType,
-        targetRef,
-        behavior as GetBehavior
-      );
-
-      if (comment) {
-        process.stdout.write(`${stripMarkdownTag(comment.body)}\n`);
-      }
-    } else {
-      await compost.postComment(
-        platform,
-        project,
-        targetType,
-        targetRef,
-        behavior,
-        body
-      );
-    }
-  }
 }
