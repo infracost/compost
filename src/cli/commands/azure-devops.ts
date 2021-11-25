@@ -9,7 +9,7 @@ export default class AzureDevOpsCommand extends BaseCommand {
   static examples = [
     `• Update a comment on a pull request:
   
-   $ compost azure-devops https://dev.azure.com/infracost/base/_git/compost-example pr 3 update --body="my comment"`,
+   $ compost azure-devops update https://dev.azure.com/infracost/base/_git/compost-example pr 3 --body="my comment"`,
   ];
 
   static flags = {
