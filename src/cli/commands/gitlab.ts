@@ -9,7 +9,7 @@ export default class GitLabCommand extends BaseCommand {
   static examples = [
     `• Update a comment on a merge request:
 
-   $ compost gitlab infracost/compost-example mr 3 update --body="my comment"`,
+   $ compost gitlab update infracost/compost-example mr 3 --body="my comment"`,
   ];
 
   static flags = {

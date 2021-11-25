@@ -57,13 +57,13 @@ compost autodetect latest
 Post a comment to a specific GitHub pull request:
 
 ```sh
-compost github infracost/compost-example pr 3 --body="my PR comment"
+compost github update infracost/compost-example pr 3 --body="my PR comment"
 ```
 
 Post a comment to a specific GitHub commit SHA:
 
 ```sh
-compost github infracost/compost-example commit 2ca7182 --body="my commit comment"
+compost github update infracost/compost-example commit 2ca7182 --body="my commit comment"
 ```
 
 ## Flags

@@ -43,12 +43,18 @@ export default abstract class BaseCommand extends Command {
 
   static args: args.Input = [
     {
+      name: 'behavior',
+      description: 'Behavior when posting or retrieving a comment',
+      required: true,
+      options: ['update', 'new', 'hide-and-new', 'delete-and-new', 'latest'],
+    },
+    {
       name: 'project',
       description: 'Project name in format owner/repo',
       required: true,
     },
     {
-      name: 'target_type',
+      name: 'target-type',
       description: 'Whether to post on a pull request or commit',
       required: true,
       options: ['pull-request', 'merge-request', 'pr', 'mr', 'commit'],
@@ -64,15 +70,9 @@ export default abstract class BaseCommand extends Command {
       },
     },
     {
-      name: 'target_ref',
+      name: 'target-ref',
       description: 'The pull request number or commit SHA',
       required: true,
-    },
-    {
-      name: 'behavior',
-      description: 'Behavior when posting or retrieving a comment',
-      required: true,
-      options: ['update', 'new', 'hide-and-new', 'delete-and-new', 'latest'],
     },
   ];
 
@@ -133,14 +133,14 @@ export default abstract class BaseCommand extends Command {
     behavior: Behavior;
   } {
     const { project } = args;
-    const targetType = args.target_type as TargetType;
+    const targetType = args['target-type'] as TargetType;
     const behavior = args.behavior as Behavior;
 
-    let targetRef: TargetReference = args.target_ref;
+    let targetRef: TargetReference = args['target-ref'];
     if (targetType === 'pull-request' || targetType === 'merge-request') {
       targetRef = parseInt(targetRef as string, 10);
       if (Number.isNaN(targetRef)) {
-        this.errorHandler(`target_ref must be a number`);
+        this.errorHandler(`target-ref must be a number`);
       }
     }
 
