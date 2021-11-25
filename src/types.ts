@@ -63,5 +63,5 @@ export interface CommentHandler {
   newComment(body: string): Promise<void>;
   hideAndNewComment(body: string): Promise<void>;
   deleteAndNewComment(body: string): Promise<void>;
-  latestComment(): Promise<Comment>;
+  latestComment(): Promise<Comment | null>;
 }
