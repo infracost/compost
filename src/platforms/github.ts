@@ -101,8 +101,7 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
       return;
     }
 
-    this.apiUrl ||=
-      process.env.GITHUB_API_URL || 'https://api.github.com';
+    this.apiUrl ||= process.env.GITHUB_API_URL || 'https://api.github.com';
 
     this.octokit = new OctokitWithRetries({
       auth: this.token,

@@ -113,9 +113,7 @@ abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment>
 
     const isPat = this.token.length === patTokenLength;
     if (isPat) {
-      val = `Basic ${Buffer.from(`:${this.token}`).toString(
-        'base64'
-      )}`;
+      val = `Basic ${Buffer.from(`:${this.token}`).toString('base64')}`;
     }
 
     return {
