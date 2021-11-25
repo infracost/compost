@@ -80,7 +80,7 @@ abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment>
     this.token ||= process.env.AZURE_DEVOPS_EXT_PAT;
     if (!this.token) {
       this.errorHandler(
-        'Azure DevOps token was not specified or could not be detected'
+        'Azure DevOps token was not specified or could not be detected from the AZURE_DEVOPS_EXT_PAT environment variable'
       );
     }
 

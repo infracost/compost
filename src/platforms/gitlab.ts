@@ -78,7 +78,7 @@ abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
     this.token ||= process.env.GITLAB_TOKEN;
     if (!this.token) {
       this.errorHandler(
-        'GitLab token was not specified or could not be detected'
+        'GitLab token was not specified or could not be detected from the GITLAB_TOKEN environment variable'
       );
       return;
     }
