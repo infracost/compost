@@ -97,8 +97,6 @@ abstract class GitHubHandler extends BaseCommentHandler<GitHubComment> {
     if (!this.token) {
       this.errorHandler(
         'GitHub token was not specified or could not be detected from the GITHUB_TOKEN environment variable'
-``` ?
-That hints towards an action the user can do (set that env) 
       );
       return;
     }
