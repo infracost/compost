@@ -8,11 +8,11 @@ export default class GitHubCommand extends BaseCommand {
   static examples = [
     `• Update a comment on a pull request:
 
-   $ compost github infracost/compost-example pr 3 update --body="my comment"
+   $ compost github update infracost/compost-example pr 3 --body="my comment"
 `,
     `• Update a comment on a commit:
     
-   $ compost github infracost/compost-example commit 2ca7182 update --body="my comment",`,
+   $ compost github update infracost/compost-example commit 2ca7182 --body="my comment",`,
   ];
 
   static flags = {

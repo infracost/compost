@@ -46,15 +46,15 @@ describe('GitHub', () => {
       args = [repo, 'pr', `${prNumber}`, `--github-token=${token}`];
 
       await GitHubCommand.run([
-        ...args,
         'new',
+        ...args,
         '--body=existing',
         '--tag=existing',
       ]);
     });
 
     test('new', async () => {
-      await GitHubCommand.run([...args, 'new', '--body=test 1']);
+      await GitHubCommand.run(['new', ...args, '--body=test 1']);
       expect(await gh.getPrComments(prNumber)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 1', isMinimized: false },
@@ -62,7 +62,7 @@ describe('GitHub', () => {
     });
 
     test('update', async () => {
-      await GitHubCommand.run([...args, 'update', '--body=test 2']);
+      await GitHubCommand.run(['update', ...args, '--body=test 2']);
       expect(await gh.getPrComments(prNumber)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 2', isMinimized: false },
@@ -70,7 +70,7 @@ describe('GitHub', () => {
     });
 
     test('hide-and-new', async () => {
-      await GitHubCommand.run([...args, 'hide-and-new', '--body=test 3']);
+      await GitHubCommand.run(['hide-and-new', ...args, '--body=test 3']);
       expect(await gh.getPrComments(prNumber)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 2', isMinimized: true },
@@ -79,7 +79,7 @@ describe('GitHub', () => {
     });
 
     test('delete-and-new', async () => {
-      await GitHubCommand.run([...args, 'delete-and-new', '--body=test 4']);
+      await GitHubCommand.run(['delete-and-new', ...args, '--body=test 4']);
       expect(await gh.getPrComments(prNumber)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 4', isMinimized: false },
@@ -87,9 +87,9 @@ describe('GitHub', () => {
     });
 
     test('latest', async () => {
-      await GitHubCommand.run([...args, 'new', '--body=test 5']);
-      await GitHubCommand.run([...args, 'new', '--body=other', '--tag=other']);
-      await GitHubCommand.run([...args, 'latest']);
+      await GitHubCommand.run(['new', ...args, '--body=test 5']);
+      await GitHubCommand.run(['new', ...args, '--body=other', '--tag=other']);
+      await GitHubCommand.run(['latest', ...args]);
       expect(out.stdout).toEqual('test 5\n');
     });
   });
@@ -100,15 +100,15 @@ describe('GitHub', () => {
       args = [repo, 'commit', commitSha, `--github-token=${token}`];
 
       await GitHubCommand.run([
-        ...args,
         'new',
+        ...args,
         '--body=existing',
         '--tag=existing',
       ]);
     });
 
     test('new', async () => {
-      await GitHubCommand.run([...args, 'new', '--body=test 1']);
+      await GitHubCommand.run(['new', ...args, '--body=test 1']);
       expect(await gh.getCommitComments(commitSha)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 1', isMinimized: false },
@@ -116,7 +116,7 @@ describe('GitHub', () => {
     });
 
     test('update', async () => {
-      await GitHubCommand.run([...args, 'update', '--body=test 2']);
+      await GitHubCommand.run(['update', ...args, '--body=test 2']);
       expect(await gh.getCommitComments(commitSha)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 2', isMinimized: false },
@@ -124,7 +124,7 @@ describe('GitHub', () => {
     });
 
     test('hide-and-new', async () => {
-      await GitHubCommand.run([...args, 'hide-and-new', '--body=test 3']);
+      await GitHubCommand.run(['hide-and-new', ...args, '--body=test 3']);
       expect(await gh.getCommitComments(commitSha)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 2', isMinimized: true },
@@ -133,7 +133,7 @@ describe('GitHub', () => {
     });
 
     test('delete-and-new', async () => {
-      await GitHubCommand.run([...args, 'delete-and-new', '--body=test 4']);
+      await GitHubCommand.run(['delete-and-new', ...args, '--body=test 4']);
       expect(await gh.getCommitComments(commitSha)).toEqual([
         { body: 'existing', isMinimized: false },
         { body: 'test 4', isMinimized: false },
@@ -141,9 +141,9 @@ describe('GitHub', () => {
     });
 
     test('latest', async () => {
-      await GitHubCommand.run([...args, 'new', '--body=test 5']);
-      await GitHubCommand.run([...args, 'new', '--body=other', '--tag=other']);
-      await GitHubCommand.run([...args, 'latest']);
+      await GitHubCommand.run(['new', ...args, '--body=test 5']);
+      await GitHubCommand.run(['new', ...args, '--body=other', '--tag=other']);
+      await GitHubCommand.run(['latest', ...args]);
       expect(out.stdout).toEqual('test 5\n');
     });
   });
