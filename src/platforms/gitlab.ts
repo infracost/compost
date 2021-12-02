@@ -26,7 +26,8 @@ class GitLabComment implements Comment {
   }
 
   sortKey(): string {
-    return this.createdAt;
+    // Use ID as well if issues were posted in the same second
+    return `${this.createdAt} ${this.id}`;
   }
 
   // eslint-disable-next-line class-methods-use-this

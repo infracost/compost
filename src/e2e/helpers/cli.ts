@@ -22,5 +22,10 @@ export function captureOutput(out: OutputMock): void {
     out.stderr += v;
     return true;
   });
+
+  jest.spyOn(console, 'error').mockImplementation((v) => {
+    out.stderr += v;
+    return true;
+  });
 }
 /* eslint-enable no-param-reassign */
