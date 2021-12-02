@@ -9,6 +9,7 @@ import {
 import { Octokit } from 'octokit';
 import { retry } from '@octokit/plugin-retry';
 import { stripMarkdownTag } from '../../util';
+import { CommentResult } from './comment';
 
 const templateOwner = 'infracost';
 const templateRepo = 'compost-e2e-tests-template';
@@ -54,8 +55,14 @@ export default class GitHubHelper {
     });
   }
 
-  async createRepoIfNotExists() {
+  async getUsername(): Promise<string> {
+    const resp = await this.octokit.rest.users.getAuthenticated();
+    return resp.data.login;
+  }
+
+  async checkRepoExists(): Promise<boolean> {
     console.log(`Checking if repo ${this.owner}/${this.repo} exists`);
+
     try {
       const resp = await this.octokit.rest.repos.get({
         owner: this.owner,
@@ -63,34 +70,49 @@ export default class GitHubHelper {
       });
 
       if (resp.data) {
-        if (
-          resp.data.template_repository?.full_name !==
-          `${templateOwner}/${templateRepo}`
-        ) {
+        if (resp.data.description !== 'Compost E2E test repo') {
           throw Error(
-            `Repo ${this.owner}/${this.repo} exists and does not use the ${templateOwner}/${templateRepo} template`
+            `Repo ${this.owner}/${this.repo} exists but wasn't created by Compost E2E tests`
           );
         }
 
-        console.log(`Repo ${this.owner}/${this.repo} already exists`);
-        return;
+        console.log(`Repo ${this.owner}/${this.repo} exists`);
+        return true;
       }
     } catch (err) {
-      if (err.status !== 404) {
-        throw err;
+      if (err.status === 404) {
+        return false;
       }
+
+      throw err;
+    }
+
+    return false;
+  }
+
+  async createRepoIfNotExists() {
+    if (await this.checkRepoExists()) {
+      return;
     }
 
     console.log(
       `Creating repo ${this.owner}/${this.repo} from ${templateOwner}/${templateRepo} template`
     );
-    await this.octokit.rest.repos.createUsingTemplate({
-      owner: this.owner,
-      name: this.repo,
-      template_owner: templateOwner,
-      template_repo: templateRepo,
-      include_all_branches: true,
-    });
+
+    const username = await this.getUsername();
+
+    if (this.owner === username) {
+      await this.octokit.rest.repos.createForAuthenticatedUser({
+        name: this.repo,
+        description: 'Compost E2E test repo',
+      });
+    } else {
+      await this.octokit.rest.repos.createInOrg({
+        org: this.owner,
+        name: this.repo,
+        description: 'Compost E2E test repo',
+      });
+    }
 
     // Sleep for 2 seconds to give GitHub time to propogate the repo creation
     await new Promise((r) => {
@@ -154,16 +176,16 @@ export default class GitHubHelper {
   async getPrComments(
     prNumber: number,
     keepMarkdownHeader?: boolean
-  ): Promise<IssueComment[]> {
+  ): Promise<CommentResult[]> {
     // Use the GraphQL api here so we can see if they're minimized
-    let after = null;
-    let hasNextPage = true;
-    let comments: IssueComment[] = [];
+    const results: IssueComment[] = [];
 
     console.log(
       `Fetching PR comments for ${this.owner}/${this.repo} PR ${prNumber}`
     );
 
+    let after = null;
+    let hasNextPage = true;
     while (hasNextPage) {
       const data = await this.octokit.graphql<{ repository?: Repository }>(
         `
@@ -172,6 +194,8 @@ export default class GitHubHelper {
             pullRequest(number: $prNumber) {
               comments(first: 100 after: $after) {
                 nodes {
+                  id
+                  createdAt
                   body
                   isMinimized
                 }
@@ -195,15 +219,17 @@ export default class GitHubHelper {
       after = data.repository?.pullRequest?.comments.pageInfo.endCursor;
       hasNextPage = data.repository?.pullRequest?.comments.pageInfo.hasNextPage;
 
-      comments.push(...(data.repository?.pullRequest?.comments.nodes || []));
+      results.push(...(data.repository?.pullRequest?.comments.nodes || []));
     }
 
-    if (!keepMarkdownHeader) {
-      comments = comments.map((c) => ({
-        ...c,
-        body: stripMarkdownTag(c.body),
+    const comments = results
+      .sort((a, b) =>
+        `${a.createdAt} ${a.id}`.localeCompare(`${b.createdAt} ${b.id}`)
+      )
+      .map((r) => ({
+        body: keepMarkdownHeader ? r.body : stripMarkdownTag(r.body),
+        isHidden: r.isMinimized,
       }));
-    }
 
     return comments;
   }
@@ -211,16 +237,16 @@ export default class GitHubHelper {
   async getCommitComments(
     commitSha: string,
     keepMarkdownHeader?: boolean
-  ): Promise<CommitComment[]> {
+  ): Promise<CommentResult[]> {
     // Use the GraphQL api here so we can see if they're minimized
-    let after = null;
-    let hasNextPage = true;
-    let comments: CommitComment[] = [];
+    const results: CommitComment[] = [];
 
     console.log(
       `Fetching commit comments for ${this.owner}/${this.repo} commit ${commitSha}`
     );
 
+    let after = null;
+    let hasNextPage = true;
     while (hasNextPage) {
       const data = await this.octokit.graphql<{ repository?: Repository }>(
         `
@@ -230,6 +256,8 @@ export default class GitHubHelper {
               ... on Commit {
                 comments(first: 100 after: $after) {
                   nodes {
+                    id
+                    createdAt
                     body
                     isMinimized
                   }
@@ -255,15 +283,17 @@ export default class GitHubHelper {
       after = commit?.comments.pageInfo.endCursor;
       hasNextPage = commit?.comments.pageInfo.hasNextPage;
 
-      comments.push(...(commit?.comments.nodes || []));
+      results.push(...(commit?.comments.nodes || []));
     }
 
-    if (!keepMarkdownHeader) {
-      comments = comments.map((c) => ({
-        ...c,
-        body: stripMarkdownTag(c.body),
+    const comments = results
+      .sort((a, b) =>
+        `${a.createdAt} ${a.id}`.localeCompare(`${b.createdAt} ${b.id}`)
+      )
+      .map((r) => ({
+        body: keepMarkdownHeader ? r.body : stripMarkdownTag(r.body),
+        isHidden: r.isMinimized,
       }));
-    }
 
     return comments;
   }
@@ -282,8 +312,6 @@ export default class GitHubHelper {
   async deleteBranch(branch: string): Promise<void> {
     console.log(`Deleting branch ${branch}`);
 
-    console.log(`refs/heads/${branch}`);
-
     await this.octokit.rest.git.deleteRef({
       owner: this.owner,
       repo: this.repo,
@@ -292,7 +320,7 @@ export default class GitHubHelper {
   }
 
   async closeAllPrs(): Promise<void> {
-    console.log(`Closing all test pull requests`);
+    console.log(`Closing all test PRs`);
 
     const data = await this.octokit.paginate(this.octokit.rest.pulls.list, {
       owner: this.owner,
@@ -307,12 +335,7 @@ export default class GitHubHelper {
         );
         continue;
       }
-      await this.octokit.rest.pulls.update({
-        owner: this.owner,
-        repo: this.repo,
-        pull_number: pr.number,
-        state: 'closed',
-      });
+      await this.closePr(pr.number);
     }
   }
 
@@ -329,11 +352,7 @@ export default class GitHubHelper {
     );
 
     for (const branch of data) {
-      await this.octokit.rest.git.deleteRef({
-        owner: this.owner,
-        repo: this.repo,
-        ref: branch.ref.replace('refs/', ''),
-      });
+      await this.deleteBranch(branch.ref.replace(`refs/heads/`, ''));
     }
   }
 

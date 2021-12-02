@@ -80,12 +80,13 @@ export default abstract class BaseCommand extends Command {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     return {
       debug: (...args: any[]) => this.debug(args),
-      // Overwrite info to use stderr instead of stdout
+      // Overwrite to use stderr instead of stdout
       info(message = '', ...args: any[]): void {
         // eslint-disable-next-line no-param-reassign
         message = typeof message === 'string' ? message : inspect(message);
         process.stderr.write(`${format(message, ...args)}\n`);
       },
+      // Overwrite to use stderr instead of stdout
       warn: (message: string) => this.warn(message),
     };
     /* eslint-enable @typescript-eslint/no-explicit-any */
