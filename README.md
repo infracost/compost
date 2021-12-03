@@ -6,12 +6,11 @@ Compost is for tools that run in CI pipelines and want to post results as pull r
 
 It currently detects the following CI environments:
 * GitHub Actions
-* GitLab CI (merge requests only)
+* GitLab CI
 * Azure DevOps
 * Azure DevOps (GitHub)
 
 Coming soon:
-* GitLab CI (commits)
 * BitBucket
 * Circle CI (GitHub)
 * CircleCI (BitBucket)
