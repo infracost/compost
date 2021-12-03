@@ -95,7 +95,7 @@ describe('GitHubActionsDetector', () => {
     });
 
     ['GITHUB_ACTIONS', 'GITHUB_TOKEN', 'GITHUB_REPOSITORY'].forEach((key) => {
-      it(`does not detect GitHub PR if $${key} is missing`, () => {
+      it(`does not detect GitHub actions if $${key} is missing`, () => {
         process.env[key] = undefined;
         expect(() => detector.detect()).toThrow(
           `${key} environment variable is not set`

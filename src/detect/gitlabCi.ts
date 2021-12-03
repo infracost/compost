@@ -30,6 +30,11 @@ export class GitLabCiDetector extends BaseDetector {
       }
     }
 
+    if (!targetRef && this.shouldDetectTargetType('commit')) {
+      targetType = 'commit';
+      targetRef = this.checkEnvVarExists('CI_COMMIT_SHA');
+    }
+
     if (!targetRef) {
       return null;
     }
