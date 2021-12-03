@@ -18,7 +18,8 @@ class GitLabComment implements Comment {
     public id: string,
     public body: string,
     public createdAt: string,
-    public url: string
+    public url: string,
+    public discussionId?: number
   ) {}
 
   ref(): string {
@@ -50,7 +51,13 @@ export class GitLab extends BasePlatform {
     super(opts);
 
     if (targetType === 'commit') {
-      this.errorHandler(`Commit target type is not supported for GitLab yet`);
+      this.handler = new GitLabCommitHandler(
+        project,
+        targetRef as string,
+        token,
+        serverUrl,
+        opts
+      );
     } else {
       this.handler = new GitLabMrHandler(
         project,
@@ -85,6 +92,16 @@ abstract class GitLabHandler extends BaseCommentHandler<GitLabComment> {
     }
 
     this.serverUrl ||= process.env.CI_SERVER_URL || 'https://gitlab.com';
+  }
+
+  protected authHeaders() {
+    return {
+      Authorization: `Bearer ${this.token}`,
+    };
+  }
+
+  protected encodedProjectPath(): string {
+    return encodeURIComponent(`${this.project}`);
   }
 }
 
@@ -155,7 +172,7 @@ export class GitLabMrHandler extends GitLabHandler {
       }>(
         `${this.serverUrl}/api/graphql`,
         { query, variables },
-        { headers: { Authorization: `Bearer ${this.token}` } }
+        { headers: this.authHeaders() }
       );
 
       if (resp.data.errors) {
@@ -188,11 +205,13 @@ export class GitLabMrHandler extends GitLabHandler {
       body: string;
       created_at: string;
     }>(
-      `${this.serverUrl}/api/v4/projects/${encodeURIComponent(
-        this.project
-      )}/merge_requests/${this.mrNumber}/notes`,
+      `${
+        this.serverUrl
+      }/api/v4/projects/${this.encodedProjectPath()}/merge_requests/${
+        this.mrNumber
+      }/notes`,
       { body },
-      { headers: { Authorization: `Bearer ${this.token}` } }
+      { headers: this.authHeaders() }
     );
 
     const url = `${this.serverUrl}/${this.project}/-/merge_requests/${this.mrNumber}#note_${resp.data.id}`;
@@ -225,7 +244,7 @@ export class GitLabMrHandler extends GitLabHandler {
     }>(
       `${this.serverUrl}/api/graphql`,
       { query, variables },
-      { headers: { Authorization: `Bearer ${this.token}` } }
+      { headers: this.authHeaders() }
     );
 
     if (resp.data.errors) {
@@ -254,7 +273,7 @@ export class GitLabMrHandler extends GitLabHandler {
     }>(
       `${this.serverUrl}/api/graphql`,
       { query, variables },
-      { headers: { Authorization: `Bearer ${this.token}` } }
+      { headers: this.authHeaders() }
     );
 
     if (resp.data.errors) {
@@ -262,6 +281,122 @@ export class GitLabMrHandler extends GitLabHandler {
         `Failed to delete comment: ${JSON.stringify(resp.data.errors)}`
       );
     }
+  }
+
+  async hideAndNewComment(body: string): Promise<void> {
+    this.logger.warn('Hiding comments is not supported by GitLab');
+    await this.newComment(body);
+  }
+
+  async callHideComment() {
+    // Shouldn't get here
+    this.errorHandler('Not implemented');
+  }
+}
+
+export class GitLabCommitHandler extends GitLabHandler {
+  constructor(
+    project: string,
+    private commitSha: string,
+    token?: string,
+    gitlabApiUrl?: string,
+    opts?: CommentHandlerOptions
+  ) {
+    super(project, token, gitlabApiUrl, opts);
+  }
+
+  async callFindMatchingComments(tag: string): Promise<GitLabComment[]> {
+    const allComments: GitLabComment[] = [];
+
+    let page = '1';
+    while (page) {
+      const resp = await axios.get<
+        {
+          id: number;
+          individual_note: boolean;
+          notes: { id: number; created_at: string; body: string }[];
+        }[]
+      >(
+        `${this.serverUrl}/api/v4/projects/${encodeURIComponent(
+          this.project
+        )}/repository/commits/${
+          this.commitSha
+        }/discussions?per_page=100&page=${page}`,
+        { headers: this.authHeaders() }
+      );
+      page = resp.headers['x-next-page'];
+
+      const discussions = resp.data.filter((d) => d.individual_note);
+
+      discussions.forEach((d) => {
+        d.notes.forEach((n) => {
+          const url = `${this.serverUrl}/${this.project}/-/commit/${this.commitSha}#note_${n.id}`;
+          allComments.push(
+            new GitLabComment(n.id.toString(), n.body, n.created_at, url, d.id)
+          );
+        });
+      });
+    }
+
+    const matchingComments = allComments.filter((c) => c.body.includes(tag));
+
+    return matchingComments;
+  }
+
+  async callCreateComment(body: string): Promise<GitLabComment> {
+    const resp = await axios.post<{
+      id: string;
+      body: string;
+      created_at: string;
+    }>(
+      `${
+        this.serverUrl
+      }/api/v4/projects/${this.encodedProjectPath()}/repository/commits/${
+        this.commitSha
+      }/comments`,
+      { note: body },
+      { headers: this.authHeaders() }
+    );
+
+    const url = `${this.serverUrl}/${this.project}/-/commits/${this.commitSha}#note_${resp.data.id}`;
+
+    return new GitLabComment(
+      resp.data.id,
+      resp.data.body,
+      resp.data.created_at,
+      url
+    );
+  }
+
+  async callUpdateComment(comment: GitLabComment, body: string): Promise<void> {
+    await axios.put<{
+      id: string;
+      body: string;
+      created_at: string;
+    }>(
+      `${
+        this.serverUrl
+      }/api/v4/projects/${this.encodedProjectPath()}/repository/commits/${
+        this.commitSha
+      }/discussions/${comment.discussionId}/notes/${comment.id}`,
+      { body },
+      { headers: this.authHeaders() }
+    );
+  }
+
+  async callDeleteComment(comment: GitLabComment): Promise<void> {
+    await axios.delete<{
+      id: string;
+      body: string;
+      created_at: string;
+    }>(
+      `${
+        this.serverUrl
+      }/api/v4/projects/${this.encodedProjectPath()}/repository/commits/${
+        this.commitSha
+      }/discussions/${comment.discussionId}/notes/${comment.id}`,
+      { headers: this.authHeaders() }
+    );
   }
 
   async hideAndNewComment(body: string): Promise<void> {
