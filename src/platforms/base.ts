@@ -21,6 +21,8 @@ import {
 export const defaultTag = 'compost-comment';
 
 export abstract class BasePlatform implements Platform {
+  protected dryRun = false;
+
   protected logger: Logger;
 
   protected errorHandler: ErrorHandler;
@@ -83,12 +85,15 @@ export abstract class BaseCommentHandler<C extends Comment>
 {
   protected tag: string;
 
+  protected dryRun: boolean;
+
   protected logger: Logger;
 
   protected errorHandler: ErrorHandler;
 
   constructor(protected opts?: CommentHandlerOptions) {
     this.tag = opts.tag || defaultTag;
+    this.dryRun = opts.dryRun ?? false;
     this.logger = opts?.logger ?? new NullLogger();
     this.errorHandler = opts?.errorHandler ?? defaultErrorHandler;
   }
@@ -129,13 +134,23 @@ export abstract class BaseCommentHandler<C extends Comment>
       this.logger.info(
         `Updating comment ${chalk.blueBright(latestMatchingComment.ref())}`
       );
-      await this.callUpdateComment(latestMatchingComment, bodyWithTag);
+
+      if (this.dryRun) {
+        this.logger.info(`${chalk.cyanBright('dry run:')} skipping update`);
+      } else {
+        await this.callUpdateComment(latestMatchingComment, bodyWithTag);
+      }
     } else {
       this.logger.info('Creating new comment');
-      const comment = await this.callCreateComment(bodyWithTag);
-      this.logger.info(
-        `Created new comment: ${chalk.blueBright(comment.ref())}`
-      );
+
+      if (this.dryRun) {
+        this.logger.info(`${chalk.cyanBright('dry run:')} skipping create`);
+      } else {
+        const comment = await this.callCreateComment(bodyWithTag);
+        this.logger.info(
+          `Created new comment: ${chalk.blueBright(comment.ref())}`
+        );
+      }
     }
   }
 
@@ -143,8 +158,15 @@ export abstract class BaseCommentHandler<C extends Comment>
     const bodyWithTag = addMarkdownTag(body, this.tag);
 
     this.logger.info('Creating new comment');
-    const comment = await this.callCreateComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
+
+    if (this.dryRun) {
+      this.logger.info(`${chalk.cyanBright('dry run:')} skipping create`);
+    } else {
+      const comment = await this.callCreateComment(bodyWithTag);
+      this.logger.info(
+        `Created new comment: ${chalk.blueBright(comment.ref())}`
+      );
+    }
   }
 
   async hideAndNewComment(body: string): Promise<void> {
@@ -163,8 +185,15 @@ export abstract class BaseCommentHandler<C extends Comment>
     await this.hideComments(matchingComments);
 
     this.logger.info('Creating new comment');
-    const comment = await this.callCreateComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
+
+    if (this.dryRun) {
+      this.logger.info(`${chalk.cyanBright('dry run:')} skipping create`);
+    } else {
+      const comment = await this.callCreateComment(bodyWithTag);
+      this.logger.info(
+        `Created new comment: ${chalk.blueBright(comment.ref())}`
+      );
+    }
   }
 
   async deleteAndNewComment(body: string): Promise<void> {
@@ -183,8 +212,15 @@ export abstract class BaseCommentHandler<C extends Comment>
     await this.deleteComments(matchingComments);
 
     this.logger.info('Creating new comment');
-    const comment = await this.callCreateComment(bodyWithTag);
-    this.logger.info(`Created new comment: ${chalk.blueBright(comment.ref())}`);
+
+    if (this.dryRun) {
+      this.logger.info(`${chalk.cyanBright('dry run:')} skipping create`);
+    } else {
+      const comment = await this.callCreateComment(bodyWithTag);
+      this.logger.info(
+        `Created new comment: ${chalk.blueBright(comment.ref())}`
+      );
+    }
   }
 
   private async deleteComments(comments: C[]): Promise<void> {
@@ -200,7 +236,13 @@ export abstract class BaseCommentHandler<C extends Comment>
           this.logger.info(
             `Deleting comment ${chalk.blueBright(comment.ref())}`
           );
-          this.callDeleteComment(comment).then(resolve);
+
+          if (this.dryRun) {
+            this.logger.info(`${chalk.cyanBright('dry run:')} skipping delete`);
+            resolve();
+          } else {
+            this.callDeleteComment(comment).then(resolve);
+          }
         })
       );
     });
@@ -232,7 +274,13 @@ export abstract class BaseCommentHandler<C extends Comment>
       promises.push(
         new Promise((resolve) => {
           this.logger.info(`Hiding comment ${chalk.blueBright(comment.ref())}`);
-          this.callHideComment(comment).then(resolve);
+
+          if (this.dryRun) {
+            this.logger.info(`${chalk.cyanBright('dry run:')} skipping hide`);
+          } else {
+            this.callHideComment(comment).then(resolve);
+            resolve();
+          }
         })
       );
     });

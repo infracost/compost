@@ -25,7 +25,6 @@ export default abstract class BaseCommand extends Command {
 
   static flags = {
     help: flags.help({ char: 'h', description: 'Show help' }),
-
     body: flags.string({
       description: 'Body of comment to post, mutually exclusive with body-file',
       exclusive: ['body-file'],
@@ -38,6 +37,10 @@ export default abstract class BaseCommand extends Command {
     tag: flags.string({
       description:
         'Will match any comments with same tag when upserting, hiding or deleting',
+    }),
+    'dry-run': flags.boolean({
+      description: 'Skips any comment posting, deleting or hiding',
+      default: false,
     }),
   };
 
@@ -121,6 +124,7 @@ export default abstract class BaseCommand extends Command {
   ): CommentHandlerOptions {
     return {
       tag: flags.tag,
+      dryRun: flags['dry-run'],
       logger: this.logger,
       errorHandler: this.errorHandler,
     };

@@ -64,7 +64,6 @@ export function autodetect(opts?: AutoDetectOptions): Platform | null | never {
         (detectResult as AzureDevOpsDetectResult).token,
         opts
       );
-      break;
     default:
       errorHandler(`Unsupported platform: ${platform}`);
       return null;
