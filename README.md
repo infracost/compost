@@ -69,9 +69,9 @@ compost github update infracost/compost-example commit 2ca7182 --body="my commit
 
 | Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description |
 |-|-|
-| `--body` | Specify the comment body content.
-| `--body-file` | Specify a path to a file containing the comment body. Mutually exclusive with `--body`.
+| `--body` | Specify the comment body content. |
+| `--body-file` | Specify a path to a file containing the comment body. Mutually exclusive with `--body`. |
 | `--tag` | Customize the comment tag. This is added to the comment as a markdown comment to detect the previously posted comments. |
 | `--platform` | Options: `github`, `gitlab`, `azure-devops`. Only supported by `autodetect` command. Limit the auto-detection to the specified platform. |
 | `--target-type` | Options: `pull-request` (`pr`), `merge-request` (`mr`), `commit`. Only supported by `autodetect` command. Limit the auto-detection to add the comment to either pull/merge requests or commits. |
-
+| `--dry-run` | Skips any comment posting, deleting or hiding. |
