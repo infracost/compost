@@ -56,6 +56,7 @@ export interface Platform {
 
 export type CommentHandlerOptions = PlatformOptions & {
   tag?: string;
+  dryRun: boolean;
 };
 
 export interface CommentHandler {
