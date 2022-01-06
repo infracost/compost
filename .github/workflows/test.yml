@@ -49,3 +49,5 @@ jobs:
           COMPOST_E2E_GITHUB_REPO: infracost/compost-e2e-tests
           COMPOST_E2E_GITLAB_TOKEN: ${{ secrets.COMPOST_E2E_GITLAB_TOKEN }}
           COMPOST_E2E_GITLAB_REPO: infracost/compost-e2e-tests
+          COMPOST_E2E_AZURE_DEVOPS_TOKEN: ${{ secrets.COMPOST_E2E_AZURE_DEVOPS_TOKEN }}
+          COMPOST_E2E_AZURE_DEVOPS_REPO_URL: https://dev.azure.com/infracost/base/_git/compost-e2e-tests

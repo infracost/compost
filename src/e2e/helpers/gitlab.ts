@@ -72,7 +72,7 @@ export default class GitLabHelper {
         return true;
       }
     } catch (err) {
-      if (err.response.status === 404) {
+      if (err.response?.status === 404) {
         return false;
       }
 

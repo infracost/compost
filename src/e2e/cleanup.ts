@@ -2,6 +2,9 @@
 
 /* eslint-disable no-console */
 
+import AzureDevOpsHelper, {
+  loadAzureDevOpsTestEnv,
+} from './helpers/azureDevOps';
 import GitHelper from './helpers/git';
 import GitHubHelper, { loadGitHubTestEnv } from './helpers/github';
 import GitLabHelper, { loadGitLabTestEnv } from './helpers/gitlab';
@@ -9,6 +12,7 @@ import GitLabHelper, { loadGitLabTestEnv } from './helpers/gitlab';
 async function cleanup() {
   await cleanupGitHub();
   await cleanupGitLab();
+  await cleanupAzureDevOps();
 }
 
 async function cleanupGitHub() {
@@ -61,6 +65,28 @@ async function cleanupGitLab() {
   await git.cleanupRepo();
 
   await gl.deleteRepoIfPossible();
+}
+
+async function cleanupAzureDevOps() {
+  console.log(`Cleaning up AzureDevOps test repo`);
+
+  const env = loadAzureDevOpsTestEnv();
+  const { repoUrl, token } = env;
+
+  const az = new AzureDevOpsHelper(repoUrl, token);
+  if (!(await az.checkRepoExists())) {
+    console.log(`Repo ${repoUrl} does not exist`);
+    return;
+  }
+
+  const git = new GitHelper(repoUrl, '', token);
+
+  await az.closeAllPrs();
+  await git.cloneTemplateRepo();
+  await git.deleteAllBranches();
+  await git.cleanupRepo();
+
+  await az.deleteRepoIfPossible();
 }
 
 cleanup()
