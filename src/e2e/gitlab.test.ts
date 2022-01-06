@@ -3,7 +3,7 @@ import { captureOutput, OutputMock, suppressOutput } from './helpers/cli';
 import GitHelper from './helpers/git';
 import GitLabHelper, { loadGitLabTestEnv } from './helpers/gitlab';
 
-fdescribe('GitLab', () => {
+describe('GitLab', () => {
   jest.setTimeout(30_000);
 
   let token: string;

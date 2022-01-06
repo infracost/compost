@@ -252,7 +252,7 @@ export class AzureDevOpsPrHandler extends AzureDevOpsHandler {
   }
 
   async hideAndNewComment(body: string): Promise<void> {
-    this.logger.warn('Hiding comments is not supported by GitLab');
+    this.logger.warn('Hiding comments is not supported by Azure DevOps');
     await this.newComment(body);
   }
 
