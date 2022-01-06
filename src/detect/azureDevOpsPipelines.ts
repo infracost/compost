@@ -110,7 +110,7 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     }
 
     return {
-      platform: 'azure-devops',
+      platform: 'github',
       project: repo,
       targetType,
       targetRef,
