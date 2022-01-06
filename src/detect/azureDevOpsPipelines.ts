@@ -39,7 +39,7 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     this.logger.debug('Checking for Azure DevOps Pipelines');
 
     this.checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit');
-    const token = this.checkEnvVarExists(process.env.SYSTEM_ACCESSTOKEN, true);
+    const token = this.checkEnvVarExists('SYSTEM_ACCESSTOKEN', true);
     const repo = this.checkEnvVarExists('BUILD_REPOSITORY_URI');
 
     let targetType: TargetType;
