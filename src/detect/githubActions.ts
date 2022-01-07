@@ -50,7 +50,7 @@ export class GitHubActionsDetector extends BaseDetector {
     }
 
     if (!targetRef) {
-      return null;
+      throw new DetectError('Could not detect target reference');
     }
 
     return {

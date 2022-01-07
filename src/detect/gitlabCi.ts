@@ -36,7 +36,7 @@ export class GitLabCiDetector extends BaseDetector {
     }
 
     if (!targetRef) {
-      return null;
+      throw new DetectError('Could not detect target reference');
     }
 
     return {
