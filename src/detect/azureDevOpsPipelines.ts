@@ -6,39 +6,24 @@ import { DetectError } from '.';
 
 export class AzureDevOpsPipelinesDetector extends BaseDetector {
   detect(): AzureDevOpsDetectResult | GitHubDetectResult {
-    try {
-      const result = this.detectAzureDevOps();
-      if (result) {
-        return result;
-      }
-    } catch (err) {
-      if (err.name === DetectError.name) {
-        this.logger.debug(err.message);
-      } else {
-        throw err;
-      }
+    this.logger.debug('Checking  Azure DevOps provider');
+
+    const provider = this.checkEnvVarExists('BUILD_REPOSITORY_PROVIDER', true);
+
+    if (provider === 'TfsGit') {
+      return this.detectAzureDevOps();
     }
 
-    try {
-      const result = this.detectGitHub();
-      if (result) {
-        return result;
-      }
-    } catch (err) {
-      if (err.name === DetectError.name) {
-        this.logger.debug(err.message);
-      } else {
-        throw err;
-      }
+    if (provider === 'GitHub') {
+      return this.detectGitHub();
     }
 
-    return null;
+    throw new DetectError('Could not detect Azure DevOps provider');
   }
 
   detectAzureDevOps(): AzureDevOpsDetectResult {
     this.logger.debug('Checking for Azure DevOps Pipelines');
 
-    this.checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'TfsGit');
     const token = this.checkEnvVarExists('SYSTEM_ACCESSTOKEN', true);
     const repo = this.checkEnvVarExists('BUILD_REPOSITORY_URI');
 
@@ -64,7 +49,7 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     }
 
     if (!targetRef) {
-      return null;
+      throw new DetectError('Could not detect target reference');
     }
 
     return {
@@ -79,7 +64,6 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
   detectGitHub(): GitHubDetectResult {
     this.logger.debug('Checking for Azure DevOps Pipelines (GitHub)');
 
-    this.checkEnvVarValue('BUILD_REPOSITORY_PROVIDER', 'GitHub');
     const token = this.checkEnvVarExists('GITHUB_TOKEN', true);
     const repo = this.checkEnvVarExists('BUILD_REPOSITORY_NAME');
     const apiUrl = process.env.GITHUB_API_URL;
@@ -106,7 +90,7 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
     }
 
     if (!targetRef) {
-      return null;
+      throw new DetectError('Could not detect target reference');
     }
 
     return {

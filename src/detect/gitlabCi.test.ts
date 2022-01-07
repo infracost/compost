@@ -67,7 +67,7 @@ describe('GitLabCiDetector', () => {
       expect(detector.detect()).toEqual(expectedPrResult);
     });
 
-    it('detects GitLab commit if targetTypes is set to commit', () => {
+    it('detects GitLab commit if targetType is set to commit', () => {
       detector = new GitLabCiDetector({ targetType: 'commit' });
       expect(detector.detect()).toEqual(expectedCommitResult);
     });
