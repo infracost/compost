@@ -145,7 +145,7 @@ describe('AzureDevOpsPipelinesDetector', () => {
         expect(detector.detect()).toEqual(expectedCommitResult);
       });
 
-      it('detects GitLab commit if only $BUILD_SOURCEVERSION is set', () => {
+      it('detects GitHub commit if only $BUILD_SOURCEVERSION is set', () => {
         process.env.SYSTEM_PULLREQUEST_PULLREQUESTNUMBER = undefined;
         expect(detector.detect()).toEqual(expectedCommitResult);
       });
