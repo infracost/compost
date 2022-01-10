@@ -140,7 +140,7 @@ describe('AzureDevOpsPipelinesDetector', () => {
         expect(detector.detect()).toEqual(expectedPrResult);
       });
 
-      it('does detects Github commit if targetType is set to commit', () => {
+      it('detects Github commit if targetType is set to commit', () => {
         detector = new AzureDevOpsPipelinesDetector({ targetType: 'commit' });
         expect(detector.detect()).toEqual(expectedCommitResult);
       });
