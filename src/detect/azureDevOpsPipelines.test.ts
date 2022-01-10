@@ -98,11 +98,19 @@ describe('AzureDevOpsPipelinesDetector', () => {
         targetRef: 2,
       };
 
+      const expectedCommitResult = {
+        ...expectedResult,
+        targetType: 'commit',
+        targetRef: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      };
+
       beforeEach(() => {
         process.env.BUILD_REPOSITORY_PROVIDER = 'GitHub';
         process.env.GITHUB_TOKEN = 'MY_GITHUB_TOKEN_VALUE';
         process.env.BUILD_REPOSITORY_NAME = 'infracost/compost-example';
         process.env.SYSTEM_PULLREQUEST_PULLREQUESTNUMBER = '2';
+        process.env.BUILD_SOURCEVERSION =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
       });
 
       afterEach(() => {
@@ -128,12 +136,23 @@ describe('AzureDevOpsPipelinesDetector', () => {
         expect(logs).not.toContain('MY_GITHUB_TOKEN_VALUE');
       });
 
-      it('detects GitHub PR if $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER is set', () => {
+      it('detects GitHub PR if $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER and $BUILD_SOURCEVERSION are set', () => {
         expect(detector.detect()).toEqual(expectedPrResult);
       });
 
-      it('does not detect Github PR if targetType is set to commit', () => {
+      it('detects Github commit if targetType is set to commit', () => {
         detector = new AzureDevOpsPipelinesDetector({ targetType: 'commit' });
+        expect(detector.detect()).toEqual(expectedCommitResult);
+      });
+
+      it('detects GitHub commit if only $BUILD_SOURCEVERSION is set', () => {
+        process.env.SYSTEM_PULLREQUEST_PULLREQUESTNUMBER = undefined;
+        expect(detector.detect()).toEqual(expectedCommitResult);
+      });
+
+      it('does not detect if neither $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER or $BUILD_SOURCEVERSION are set', () => {
+        process.env.SYSTEM_PULLREQUEST_PULLREQUESTNUMBER = undefined;
+        process.env.BUILD_SOURCEVERSION = undefined;
         expect(() => detector.detect()).toThrow(DetectError);
       });
 

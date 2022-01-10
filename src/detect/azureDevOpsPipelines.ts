@@ -89,6 +89,11 @@ export class AzureDevOpsPipelinesDetector extends BaseDetector {
       }
     }
 
+    if (!targetRef && this.shouldDetectTargetType('commit')) {
+      targetType = 'commit';
+      targetRef = this.checkEnvVarExists('BUILD_SOURCEVERSION');
+    }
+
     if (!targetRef) {
       throw new DetectError('Could not detect target reference');
     }
