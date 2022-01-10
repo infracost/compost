@@ -66,6 +66,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "format": "prettier --write 'src/**/*.{js,ts}'",
     "lint": "eslint --ext .ts,.js --ignore-path .gitignore .",
     "test": "jest --testPathIgnorePatterns ./e2e --setupFiles ./src/setupTests.ts",
