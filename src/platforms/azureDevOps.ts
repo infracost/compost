@@ -100,7 +100,10 @@ abstract class AzureDevOpsHandler extends BaseCommentHandler<AzureDevOpsComment>
       );
     }
 
-    let url = `${parts[0]}_apis/git/repositories/${parts[1]}`;
+    const apiUrl = new URL(parts[0]);
+    apiUrl.username = '';
+    apiUrl.password = '';
+    let url = `${apiUrl.href}_apis/git/repositories/${parts[1]}`;
     if (!url.endsWith('/')) {
       url += '/';
     }
