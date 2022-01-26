@@ -8,6 +8,15 @@ import {
 } from '../types';
 import { BaseCommentHandler, BasePlatform } from './base';
 
+if (process.env.DEBUG) {
+  axios.interceptors.request.use((config) => {
+    console.log('Starting Request', config)
+    return config;
+  }, (error) => {
+    return Promise.reject(error);
+  });
+}
+
 export type GitLabDetectResult = DetectResult & {
   token: string;
   serverUrl: string;
@@ -199,6 +208,9 @@ export class GitLabMrHandler extends GitLabHandler {
   }
 
   async callCreateComment(body: string): Promise<GitLabComment> {
+    // TEST
+    console.log(JSON.stringify(body));
+
     // Use the REST API here. We'd have to do 2 requests for GraphQL to get the Merge Request ID as well
     const resp = await axios.post<{
       id: string;
@@ -225,6 +237,9 @@ export class GitLabMrHandler extends GitLabHandler {
   }
 
   async callUpdateComment(comment: GitLabComment, body: string): Promise<void> {
+    // TEST
+    console.log(JSON.stringify(body));
+
     const query = `
       mutation($input: UpdateNoteInput!) {
         updateNote(input: $input) {
