@@ -1,5 +1,13 @@
 # Compost
 
+## Deprecation notice
+
+⚠️ This repo is now deprecated. ⚠️
+
+We have moved this functionality into the Infracost CLI via the `infracost comment` subcommand. See [the infracost comment docs](https://www.infracost.io/docs/features/cli_commands/#comment-on-pull-requests) for usage.
+
+---
+
 Compost is for tools that run in CI pipelines and want to post results as pull request/commit comments.
 
 <img src=".github/assets/screenshot.png" alt="Compost screenshot" width=800 />
